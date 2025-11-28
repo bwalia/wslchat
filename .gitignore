@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+src/renderer/node_modules/
+
+# Build outputs
+dist/
+out/
+build/
+src/renderer/build/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test coverage
+coverage/
+
+# Electron builder cache
+.cache/
+
+# TypeScript
+*.tsbuildinfo
+
+# Temporary files
+tmp/
+temp/

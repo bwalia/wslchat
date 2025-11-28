@@ -1,0 +1,316 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles */
+@layer base {
+  * {
+    @apply box-border;
+  }
+
+  html {
+    @apply h-full;
+  }
+
+  body {
+    @apply h-full m-0 text-gray-900 dark:text-gray-100 bg-white dark:bg-channel-bgDark;
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    @apply h-full;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400 dark:bg-gray-600;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-primary-500/30;
+  }
+}
+
+/* Component styles */
+@layer components {
+  /* Sidebar styles */
+  .sidebar {
+    @apply bg-sidebar dark:bg-sidebar-dark text-sidebar-text;
+  }
+
+  .sidebar-item {
+    @apply flex items-center px-4 py-1.5 rounded-md cursor-pointer
+           text-sidebar-text hover:text-sidebar-textHover hover:bg-sidebar-hover
+           transition-colors duration-150;
+  }
+
+  .sidebar-item.active {
+    @apply bg-sidebar-active text-white;
+  }
+
+  /* Channel header */
+  .channel-header {
+    @apply flex items-center justify-between px-4 py-3
+           border-b border-channel-border dark:border-channel-borderDark
+           bg-channel-bg dark:bg-channel-bgDark;
+  }
+
+  /* Message styles */
+  .message {
+    @apply flex gap-3 px-5 py-2 hover:bg-message-hover dark:hover:bg-message-hoverDark
+           transition-colors duration-100;
+  }
+
+  .message-content {
+    @apply text-gray-900 dark:text-gray-100 leading-relaxed break-words;
+  }
+
+  .message-time {
+    @apply text-xs text-gray-500 dark:text-gray-400;
+  }
+
+  /* Input styles */
+  .input-field {
+    @apply w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600
+           bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+           placeholder-gray-400 dark:placeholder-gray-500
+           transition-colors duration-150;
+  }
+
+  /* Button styles */
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium
+           transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary-600 text-white hover:bg-primary-700
+           focus:ring-primary-500;
+  }
+
+  .btn-secondary {
+    @apply btn bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200
+           hover:bg-gray-200 dark:hover:bg-gray-600 focus:ring-gray-500;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-gray-600 dark:text-gray-300
+           hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-gray-500;
+  }
+
+  .btn-danger {
+    @apply btn bg-accent-red text-white hover:bg-red-600 focus:ring-red-500;
+  }
+
+  /* Badge styles */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-primary {
+    @apply badge bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200;
+  }
+
+  .badge-green {
+    @apply badge bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+  }
+
+  .badge-red {
+    @apply badge bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200;
+  }
+
+  /* Avatar styles */
+  .avatar {
+    @apply rounded-lg overflow-hidden flex-shrink-0 bg-gray-200 dark:bg-gray-700;
+  }
+
+  .avatar-sm {
+    @apply avatar w-6 h-6;
+  }
+
+  .avatar-md {
+    @apply avatar w-9 h-9;
+  }
+
+  .avatar-lg {
+    @apply avatar w-12 h-12;
+  }
+
+  /* Presence indicator */
+  .presence-indicator {
+    @apply absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800;
+  }
+
+  .presence-online {
+    @apply presence-indicator bg-accent-green;
+  }
+
+  .presence-away {
+    @apply presence-indicator bg-accent-yellow;
+  }
+
+  .presence-dnd {
+    @apply presence-indicator bg-accent-red;
+  }
+
+  .presence-offline {
+    @apply presence-indicator bg-gray-400;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    @apply absolute z-50 px-2 py-1 text-sm text-white bg-gray-900 rounded shadow-lg
+           pointer-events-none whitespace-nowrap;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center
+           bg-black/50 backdrop-blur-sm;
+  }
+
+  .modal-content {
+    @apply bg-white dark:bg-gray-800 rounded-xl shadow-modal
+           max-w-lg w-full max-h-[90vh] overflow-auto;
+  }
+
+  /* Dropdown */
+  .dropdown {
+    @apply absolute z-40 mt-1 py-1 bg-white dark:bg-gray-800
+           rounded-lg shadow-dropdown border border-gray-200 dark:border-gray-700;
+  }
+
+  .dropdown-item {
+    @apply flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-200
+           hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer;
+  }
+
+  /* Message input area */
+  .message-input-container {
+    @apply flex flex-col mx-5 mb-4 rounded-xl border border-gray-300 dark:border-gray-600
+           bg-white dark:bg-gray-800 focus-within:ring-2 focus-within:ring-primary-500
+           focus-within:border-transparent transition-all duration-150;
+  }
+
+  .message-input {
+    @apply w-full p-3 bg-transparent resize-none outline-none
+           text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500;
+  }
+
+  /* Emoji picker button */
+  .emoji-btn {
+    @apply p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700
+           text-gray-500 hover:text-gray-700 dark:hover:text-gray-300
+           transition-colors duration-150;
+  }
+
+  /* Thread panel */
+  .thread-panel {
+    @apply w-96 border-l border-gray-200 dark:border-gray-700
+           bg-white dark:bg-channel-bgDark;
+  }
+
+  /* Search */
+  .search-input {
+    @apply w-full px-4 py-2 pl-10 rounded-lg
+           bg-gray-100 dark:bg-gray-700
+           text-gray-900 dark:text-gray-100
+           placeholder-gray-500 dark:placeholder-gray-400
+           border-none focus:outline-none focus:ring-2 focus:ring-primary-500;
+  }
+
+  /* Typing indicator */
+  .typing-indicator {
+    @apply flex items-center gap-1 px-5 py-2 text-sm text-gray-500 dark:text-gray-400;
+  }
+
+  .typing-dot {
+    @apply w-1.5 h-1.5 rounded-full bg-gray-400 animate-typing;
+  }
+
+  .typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  .typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+
+  /* Reaction */
+  .reaction {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs
+           bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600
+           cursor-pointer transition-colors duration-150;
+  }
+
+  .reaction.active {
+    @apply bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300;
+  }
+
+  /* Code block */
+  .code-block {
+    @apply p-3 rounded-lg bg-gray-800 text-gray-100 font-mono text-sm overflow-x-auto;
+  }
+
+  /* Mention highlight */
+  .mention {
+    @apply px-1 py-0.5 rounded bg-primary-100 dark:bg-primary-900
+           text-primary-700 dark:text-primary-300 font-medium cursor-pointer
+           hover:bg-primary-200 dark:hover:bg-primary-800;
+  }
+
+  /* Unread indicator */
+  .unread-badge {
+    @apply min-w-[1.25rem] h-5 px-1.5 rounded-full text-xs font-bold
+           flex items-center justify-center
+           bg-accent-red text-white;
+  }
+}
+
+/* Utility styles */
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Truncate multiple lines */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Drag region for custom title bar */
+  .drag-region {
+    -webkit-app-region: drag;
+  }
+
+  .no-drag {
+    -webkit-app-region: no-drag;
+  }
+}
