@@ -16,16 +16,20 @@ const CreateChannelModal: React.FC = () => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const result = await dispatch(
-      createChannel({
-        name: name.trim().toLowerCase().replace(/\s+/g, '-'),
-        description: description.trim(),
-        type,
-      })
-    );
+    try {
+      await dispatch(
+        createChannel({
+          name: name.trim().toLowerCase().replace(/\s+/g, '-'),
+          description: description.trim(),
+          type,
+        })
+      ).unwrap();
 
-    if (!result.type.endsWith('rejected')) {
+      // Success - close modal
       dispatch(closeCreateChannel());
+    } catch (error) {
+      // Error is already set in Redux state by the rejected action
+      console.error('[CreateChannel] Failed:', error);
     }
   };
 

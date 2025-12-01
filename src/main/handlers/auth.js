@@ -1,69 +1,12 @@
 /**
  * Authentication IPC Handlers
- * Professional authentication handling for Convo desktop app
+ * Production-ready authentication handling for Convo desktop app
  *
  * Note: Lapis API expects form-urlencoded data for authentication endpoints,
  * not JSON. This is because Lapis uses `self.params` which parses form data.
  */
 
-const axios = require('axios');
-const querystring = require('querystring');
-const config = require('../config');
-
-// API configuration
-const API_URL = config.apiUrl;
-
-/**
- * Create an axios instance for form-urlencoded requests
- * Lapis API expects form data for authentication endpoints (uses self.params)
- * @param {string|null} token - Optional auth token
- * @returns {import('axios').AxiosInstance}
- */
-const createApiClient = (token = null) => {
-  const headers = {
-    'Content-Type': 'application/x-www-form-urlencoded',
-    'Accept': 'application/json',
-  };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  return axios.create({
-    baseURL: API_URL,
-    headers,
-    timeout: 30000,
-    validateStatus: (status) => status < 500,
-  });
-};
-
-/**
- * Handle common network errors and return appropriate error response
- * @param {Error} error - The error object
- * @param {string} defaultMessage - Default error message
- * @returns {{ success: false, error: string }}
- */
-const handleNetworkError = (error, defaultMessage) => {
-  const errorMap = {
-    ECONNREFUSED: 'Cannot connect to server. Please check if the API is running.',
-    ENOTFOUND: 'Server not found. Please check your network connection.',
-    ETIMEDOUT: 'Request timed out. Please try again.',
-    TIMEOUT: 'Request timed out. Please try again.',
-    ECONNRESET: 'Connection was reset. Please try again.',
-    ECONNABORTED: 'Connection was aborted. Please try again.',
-  };
-
-  if (error.code && errorMap[error.code]) {
-    console.error(`Network error [${error.code}]:`, error.message);
-    return { success: false, error: errorMap[error.code] };
-  }
-
-  console.error('Request error:', error.message);
-  console.error('Error details:', error.response?.data);
-
-  const message = error.response?.data?.error || error.message || defaultMessage;
-  return { success: false, error: message };
-};
+const { createApiClient, handleNetworkError, apiRequest, encodeFormData } = require('../services/api');
 
 /**
  * Register authentication IPC handlers
@@ -76,49 +19,63 @@ const register = (ipcMain, store) => {
    * Sends form-urlencoded data as required by Lapis API
    */
   ipcMain.handle('auth:login', async (_, credentials) => {
-    console.log('=== AUTH LOGIN ===');
-    console.log('API_URL:', API_URL);
-    console.log('Identifier:', credentials.email || credentials.username);
+    console.log('[Auth] Login attempt for:', credentials.email || credentials.username);
+
+    if (!credentials.email && !credentials.username) {
+      return { success: false, error: 'Email or username is required' };
+    }
+
+    if (!credentials.password) {
+      return { success: false, error: 'Password is required' };
+    }
 
     try {
-      const api = createApiClient();
+      const api = createApiClient(null, { useFormData: true });
 
-      // Lapis expects 'username' or 'identifier' field as form data
-      const formData = querystring.stringify({
+      const formData = encodeFormData({
         username: credentials.email || credentials.username,
         password: credentials.password,
       });
 
-      console.log('POST:', `${API_URL}/auth/login`);
-      console.log('Content-Type: application/x-www-form-urlencoded');
-
       const response = await api.post('/auth/login', formData);
 
       if (response.status >= 400) {
-        const errorMessage = response.data?.error || 'Invalid credentials';
-        console.error('Login failed:', response.status, errorMessage);
+        const errorMessage = response.data?.error || response.data?.message || 'Invalid credentials';
+        console.error('[Auth] Login failed:', response.status, errorMessage);
         return { success: false, error: errorMessage };
       }
 
       const { user, token } = response.data;
 
       if (!user || !token) {
-        console.error('Invalid response: missing user or token');
+        console.error('[Auth] Invalid response: missing user or token');
         return { success: false, error: 'Invalid server response' };
       }
 
-      // Store auth data securely
+      // Normalize user data - Lapis returns 'id' but we use 'uuid' internally
+      const normalizedUser = {
+        ...user,
+        uuid: user.uuid || user.id, // Lapis returns 'id', normalize to 'uuid'
+      };
+
+      // Validate user has required fields
+      if (!normalizedUser.uuid) {
+        console.error('[Auth] Invalid user data: missing uuid/id');
+        return { success: false, error: 'Invalid user data received' };
+      }
+
+      // Store auth data
       store.set('auth', {
-        user,
+        user: normalizedUser,
         token,
         loggedInAt: new Date().toISOString(),
       });
 
-      console.log('Login successful:', user.email || user.id);
-      return { success: true, user, token };
-
+      console.log('[Auth] Login successful:', normalizedUser.email || normalizedUser.name || normalizedUser.uuid);
+      return { success: true, user: normalizedUser, token };
     } catch (error) {
-      return handleNetworkError(error, 'Login failed');
+      console.error('[Auth] Login error:', error.message);
+      return handleNetworkError(error, 'Login failed. Please try again.');
     }
   });
 
@@ -126,20 +83,27 @@ const register = (ipcMain, store) => {
    * Logout - clear local auth and notify server
    */
   ipcMain.handle('auth:logout', async () => {
+    console.log('[Auth] Logout initiated');
+
     try {
       const auth = store.get('auth');
+
       if (auth?.token) {
-        const api = createApiClient(auth.token);
-        // Best effort - don't fail logout if server call fails
-        await api.post('/auth/logout').catch((err) => {
-          console.log('Server logout notification failed (non-blocking):', err.message);
-        });
+        try {
+          const api = createApiClient(store, { useFormData: true });
+          await api.post('/auth/logout');
+          console.log('[Auth] Server logout successful');
+        } catch (error) {
+          // Non-blocking - continue with local logout even if server call fails
+          console.warn('[Auth] Server logout notification failed:', error.message);
+        }
       }
     } finally {
       // Always clear local auth data
       store.delete('auth');
-      console.log('Local auth cleared');
+      console.log('[Auth] Local auth cleared');
     }
+
     return { success: true };
   });
 
@@ -148,51 +112,74 @@ const register = (ipcMain, store) => {
    * Sends form-urlencoded data as required by Lapis API
    */
   ipcMain.handle('auth:validate-token', async () => {
+    const auth = store.get('auth');
+
+    if (!auth?.token) {
+      console.log('[Auth] No token to validate');
+      return { success: false, error: 'No token stored' };
+    }
+
+    console.log('[Auth] Validating token...');
+
     try {
-      const auth = store.get('auth');
-      if (!auth?.token) {
-        return { success: false, error: 'No token stored' };
-      }
+      const api = createApiClient(null, { useFormData: true });
 
-      console.log('Validating token...');
-      const api = createApiClient();
-
-      // Send token as form data
-      const formData = querystring.stringify({
-        token: auth.token,
-      });
-
+      const formData = encodeFormData({ token: auth.token });
       const response = await api.post('/auth/oauth/validate', formData);
 
       if (response.status >= 400) {
-        console.log('Token validation failed:', response.status);
-        store.delete('auth');
-        return { success: false, error: response.data?.error || 'Token invalid' };
+        console.log('[Auth] Token validation failed:', response.status);
+
+        // Clear auth on definitive auth failures
+        if (response.status === 401 || response.status === 403) {
+          store.delete('auth');
+        }
+
+        return {
+          success: false,
+          error: response.data?.error || response.data?.message || 'Token invalid',
+        };
       }
 
-      const { user, token } = response.data;
+      const { user, token: newToken } = response.data;
 
-      // Update stored auth data
-      store.set('auth', {
-        user,
-        token: token || auth.token,
+      if (!user) {
+        console.error('[Auth] Invalid validation response: missing user');
+        store.delete('auth');
+        return { success: false, error: 'Invalid validation response' };
+      }
+
+      // Normalize user data - Lapis returns 'id' but we use 'uuid' internally
+      const normalizedUser = {
+        ...user,
+        uuid: user.uuid || user.id,
+      };
+
+      // Update stored auth data with fresh data
+      const updatedAuth = {
+        user: normalizedUser,
+        token: newToken || auth.token,
         loggedInAt: auth.loggedInAt,
         validatedAt: new Date().toISOString(),
-      });
+      };
 
-      console.log('Token validated successfully');
-      return { success: true, user, token: token || auth.token };
+      store.set('auth', updatedAuth);
 
+      console.log('[Auth] Token validated successfully');
+      return {
+        success: true,
+        user: normalizedUser,
+        token: updatedAuth.token,
+      };
     } catch (error) {
-      console.error('Token validation error:', error.message);
+      console.error('[Auth] Token validation error:', error.message);
 
       // Only clear auth on definitive auth failures, not network errors
       if (error.response?.status === 401 || error.response?.status === 403) {
         store.delete('auth');
       }
 
-      const message = error.response?.data?.error || 'Token validation failed';
-      return { success: false, error: message };
+      return handleNetworkError(error, 'Token validation failed');
     }
   });
 
@@ -201,9 +188,20 @@ const register = (ipcMain, store) => {
    */
   ipcMain.handle('auth:get-stored-auth', async () => {
     const auth = store.get('auth');
-    if (!auth) {
+
+    if (!auth?.token || !auth?.user) {
       return { success: false, error: 'Not logged in' };
     }
+
+    // Check if token might be expired (optional: add expiry check)
+    const loggedInAt = auth.loggedInAt ? new Date(auth.loggedInAt) : null;
+    const now = new Date();
+
+    // If logged in more than 30 days ago, suggest revalidation
+    if (loggedInAt && now - loggedInAt > 30 * 24 * 60 * 60 * 1000) {
+      console.log('[Auth] Stored auth is old, recommending validation');
+    }
+
     return {
       success: true,
       user: auth.user,
@@ -215,6 +213,7 @@ const register = (ipcMain, store) => {
    * Get Google OAuth URL for browser-based authentication
    */
   ipcMain.handle('auth:google-login', async () => {
+    const { API_URL } = require('../services/api');
     return {
       success: true,
       url: `${API_URL}/auth/google`,
@@ -230,31 +229,147 @@ const register = (ipcMain, store) => {
       return { success: false, error: 'No token provided' };
     }
 
-    try {
-      const api = createApiClient();
+    console.log('[Auth] Handling OAuth callback');
 
-      // Validate the received token
-      const formData = querystring.stringify({ token });
+    try {
+      const api = createApiClient(null, { useFormData: true });
+
+      const formData = encodeFormData({ token });
       const response = await api.post('/auth/oauth/validate', formData);
 
       if (response.status >= 400) {
-        return { success: false, error: response.data?.error || 'Invalid token' };
+        return {
+          success: false,
+          error: response.data?.error || response.data?.message || 'Invalid token',
+        };
       }
 
       const { user } = response.data;
 
+      if (!user) {
+        return { success: false, error: 'Invalid validation response' };
+      }
+
+      // Normalize user data - Lapis returns 'id' but we use 'uuid' internally
+      const normalizedUser = {
+        ...user,
+        uuid: user.uuid || user.id,
+      };
+
       // Store auth data
       store.set('auth', {
-        user,
+        user: normalizedUser,
         token,
         loggedInAt: new Date().toISOString(),
+        authMethod: 'oauth',
       });
 
-      console.log('OAuth callback handled successfully:', user.email || user.id);
-      return { success: true, user, token };
-
+      console.log('[Auth] OAuth callback handled successfully:', normalizedUser.email || normalizedUser.uuid);
+      return { success: true, user: normalizedUser, token };
     } catch (error) {
-      return handleNetworkError(error, 'OAuth callback failed');
+      console.error('[Auth] OAuth callback error:', error.message);
+      return handleNetworkError(error, 'OAuth authentication failed');
+    }
+  });
+
+  /**
+   * Refresh authentication token
+   * Call this when receiving a 401 response
+   */
+  ipcMain.handle('auth:refresh-token', async () => {
+    const auth = store.get('auth');
+
+    if (!auth?.token) {
+      return { success: false, error: 'No token to refresh' };
+    }
+
+    console.log('[Auth] Attempting token refresh');
+
+    try {
+      const api = createApiClient(null, { useFormData: true });
+
+      const formData = encodeFormData({ token: auth.token });
+      const response = await api.post('/auth/refresh', formData);
+
+      if (response.status >= 400) {
+        console.log('[Auth] Token refresh failed:', response.status);
+
+        // Clear auth on failure
+        if (response.status === 401 || response.status === 403) {
+          store.delete('auth');
+        }
+
+        return {
+          success: false,
+          error: response.data?.error || 'Token refresh failed',
+        };
+      }
+
+      const { user, token: newToken } = response.data;
+
+      if (!newToken) {
+        return { success: false, error: 'No new token received' };
+      }
+
+      // Update stored auth
+      store.set('auth', {
+        ...auth,
+        user: user || auth.user,
+        token: newToken,
+        refreshedAt: new Date().toISOString(),
+      });
+
+      console.log('[Auth] Token refreshed successfully');
+      return { success: true, token: newToken, user: user || auth.user };
+    } catch (error) {
+      console.error('[Auth] Token refresh error:', error.message);
+
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        store.delete('auth');
+      }
+
+      return handleNetworkError(error, 'Token refresh failed');
+    }
+  });
+
+  /**
+   * Update user profile
+   */
+  ipcMain.handle('auth:update-profile', async (_, updates) => {
+    const auth = store.get('auth');
+
+    if (!auth?.token) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    try {
+      const api = createApiClient(store, { useFormData: true });
+
+      const formData = encodeFormData(updates);
+      const response = await api.put('/auth/profile', formData);
+
+      if (response.status >= 400) {
+        return {
+          success: false,
+          error: response.data?.error || 'Failed to update profile',
+        };
+      }
+
+      const { user } = response.data;
+
+      if (user) {
+        store.set('auth', {
+          ...auth,
+          user,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      console.log('[Auth] Profile updated successfully');
+      return { success: true, user: user || auth.user };
+    } catch (error) {
+      console.error('[Auth] Profile update error:', error.message);
+      return handleNetworkError(error, 'Failed to update profile');
     }
   });
 };

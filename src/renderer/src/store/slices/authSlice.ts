@@ -15,6 +15,7 @@ interface AuthState {
   isLoading: boolean;
   isInitialized: boolean;
   error: string | null;
+  lastAuthCheck: number | null;
 }
 
 const initialState: AuthState = {
@@ -24,6 +25,7 @@ const initialState: AuthState = {
   isLoading: false,
   isInitialized: false,
   error: null,
+  lastAuthCheck: null,
 };
 
 // Async thunks
@@ -167,6 +169,7 @@ const authSlice = createSlice({
         state.user = action.payload.user;
         state.token = action.payload.token;
         state.isInitialized = true;
+        state.lastAuthCheck = Date.now();
       })
       .addCase(validateToken.rejected, (state) => {
         state.isLoading = false;

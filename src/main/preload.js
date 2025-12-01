@@ -19,6 +19,9 @@ const validInvokeChannels = [
   'auth:validate-token',
   'auth:get-stored-auth',
   'auth:google-login',
+  'auth:refresh-token',
+  'auth:update-profile',
+  'auth:handle-oauth-callback',
 
   // Channels
   'channels:list',

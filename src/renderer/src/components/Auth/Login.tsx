@@ -15,7 +15,13 @@ const Login: React.FC = () => {
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) return;
 
-    dispatch(login({ email: trimmedEmail, password }));
+    try {
+      await dispatch(login({ email: trimmedEmail, password })).unwrap();
+      // Login successful - React Router will redirect to main layout
+    } catch (error) {
+      // Error is already set in Redux state by the rejected action
+      console.error('[Login] Failed:', error);
+    }
   };
 
   const handleInputChange = () => {

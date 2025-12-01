@@ -217,15 +217,19 @@ export const searchChannels = createAsyncThunk<Channel[], { query: string; param
 
 export const markChannelAsRead = createAsyncThunk<string, string>(
   'channel/markAsRead',
-  async (channelUuid, { rejectWithValue }) => {
+  async (channelUuid) => {
     try {
+      // Fire and forget - don't block on errors for this non-critical operation
       const result = await window.electronAPI.invoke('channels:mark-as-read', channelUuid);
       if (!result.success) {
-        return rejectWithValue(result.error || 'Failed to mark as read');
+        // Log but don't reject - this is a non-critical operation
+        console.warn('[Channel] Mark as read failed:', result.error);
       }
       return channelUuid;
     } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to mark as read');
+      // Log but don't reject - this is a non-critical operation
+      console.warn('[Channel] Mark as read error:', error.message);
+      return channelUuid;
     }
   }
 );
