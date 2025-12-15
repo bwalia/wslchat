@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { Message } from '../../types';
 import { useAppDispatch, useAppSelector } from '../../hooks/useAppDispatch';
 import { toggleReaction, deleteMessage, pinMessage, unpinMessage } from '../../store/slices/messageSlice';
 import { openThread } from '../../store/slices/uiSlice';
 import { format } from 'date-fns';
 import clsx from 'clsx';
+import { parseApiDate } from '../../utils/date';
 
 interface MessageItemProps {
   message: Message;
@@ -17,8 +18,12 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, showAvatar }) => {
   const [showActions, setShowActions] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
-  const isOwnMessage = message.user_uuid === user?.id;
-  const formattedTime = format(new Date(message.created_at), 'h:mm a');
+  const isOwnMessage = message.user_uuid === user?.uuid;
+
+  const formattedTime = useMemo(() => {
+    const date = parseApiDate(message.created_at);
+    return format(date, 'h:mm a');
+  }, [message.created_at]);
 
   const handleReaction = (emoji: string) => {
     dispatch(toggleReaction({ messageUuid: message.uuid, emoji }));

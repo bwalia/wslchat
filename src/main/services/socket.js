@@ -149,6 +149,23 @@ class SocketService extends EventEmitter {
       this.emit('member:left', data);
     });
 
+    // Invitation events
+    this.socket.on('invite:received', (data) => {
+      this.emit('invite:received', data);
+    });
+
+    this.socket.on('invite:accepted', (data) => {
+      this.emit('invite:accepted', data);
+    });
+
+    this.socket.on('invite:declined', (data) => {
+      this.emit('invite:declined', data);
+    });
+
+    this.socket.on('invite:expired', (data) => {
+      this.emit('invite:expired', data);
+    });
+
     // Error handling
     this.socket.on('error', (error) => {
       console.error('Socket error:', error);

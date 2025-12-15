@@ -6,6 +6,56 @@
 const { createApiClient, handleNetworkError, withRetry } = require('../services/api');
 
 /**
+ * Normalize a message from the API response format to the frontend format
+ * The API returns flat user data (first_name, last_name, sender_username)
+ * The frontend expects a nested user object with a name property
+ * @param {Object} message - Raw message from API
+ * @returns {Object} - Normalized message
+ */
+const normalizeMessage = (message) => {
+  if (!message) return message;
+
+  // Build user object from flat fields
+  const user = {
+    uuid: message.user_uuid,
+    email: message.email || '',
+    first_name: message.first_name || '',
+    last_name: message.last_name || '',
+    username: message.sender_username || message.username || '',
+    // Create display name from available data
+    name:
+      message.first_name && message.last_name
+        ? `${message.first_name} ${message.last_name}`
+        : message.sender_username || message.username || message.email || 'Unknown User',
+  };
+
+  return {
+    ...message,
+    user,
+    // Ensure required fields have defaults
+    is_edited: message.is_edited || false,
+    is_deleted: message.is_deleted || false,
+    is_pinned: message.is_pinned || false,
+    reply_count: message.reply_count || 0,
+    reactions: message.reactions || [],
+    attachments: message.attachments || [],
+    mentions: message.mentions || [],
+  };
+};
+
+/**
+ * Normalize an array of messages and reverse to display order (oldest first)
+ * API returns newest first (DESC), but display needs oldest first (ASC)
+ * @param {Array} messages - Array of raw messages from API
+ * @returns {Array} - Array of normalized messages in display order
+ */
+const normalizeMessages = (messages) => {
+  if (!Array.isArray(messages)) return [];
+  // Normalize each message and reverse for display order (oldest first)
+  return messages.map(normalizeMessage).reverse();
+};
+
+/**
  * Register message IPC handlers
  * @param {import('electron').IpcMain} ipcMain
  * @param {import('electron-store')} store
@@ -52,7 +102,17 @@ const register = (ipcMain, store, getSocketService) => {
         };
       }
 
-      return { success: true, data: response.data };
+      // Normalize messages: add user object and reverse for display order
+      const rawMessages = response.data?.data || [];
+      const normalizedMessages = normalizeMessages(rawMessages);
+
+      return {
+        success: true,
+        data: {
+          ...response.data,
+          data: normalizedMessages,
+        },
+      };
     } catch (error) {
       console.error('[Messages] List error:', error.message);
       return handleNetworkError(error, 'Failed to fetch messages');
@@ -83,7 +143,8 @@ const register = (ipcMain, store, getSocketService) => {
         };
       }
 
-      return { success: true, data: response.data };
+      // Normalize the message
+      return { success: true, data: normalizeMessage(response.data) };
     } catch (error) {
       console.error('[Messages] Get error:', error.message);
       return handleNetworkError(error, 'Failed to fetch message');
@@ -118,17 +179,20 @@ const register = (ipcMain, store, getSocketService) => {
         };
       }
 
+      // Normalize the message
+      const normalizedMessage = normalizeMessage(response.data);
+
       // Emit via socket for real-time delivery to other clients
       const socketService = getSocketService();
       if (socketService) {
         socketService.emit('message:send', {
           channelUuid,
-          message: response.data,
+          message: normalizedMessage,
         });
       }
 
       console.log('[Messages] Sent to:', channelUuid);
-      return { success: true, data: response.data };
+      return { success: true, data: normalizedMessage };
     } catch (error) {
       console.error('[Messages] Send error:', error.message);
       return handleNetworkError(error, 'Failed to send message');
@@ -163,17 +227,20 @@ const register = (ipcMain, store, getSocketService) => {
         };
       }
 
+      // Normalize the message
+      const normalizedMessage = normalizeMessage(response.data);
+
       // Emit via socket
       const socketService = getSocketService();
       if (socketService) {
         socketService.emit('message:update', {
           messageUuid,
-          message: response.data,
+          message: normalizedMessage,
         });
       }
 
       console.log('[Messages] Updated:', messageUuid);
-      return { success: true, data: response.data };
+      return { success: true, data: normalizedMessage };
     } catch (error) {
       console.error('[Messages] Update error:', error.message);
       return handleNetworkError(error, 'Failed to update message');
@@ -250,7 +317,16 @@ const register = (ipcMain, store, getSocketService) => {
         };
       }
 
-      return { success: true, data: response.data };
+      // Normalize thread data
+      const threadData = response.data || {};
+      return {
+        success: true,
+        data: {
+          parent: normalizeMessage(threadData.parent),
+          replies: (threadData.replies || []).map(normalizeMessage),
+          total: threadData.total || 0,
+        },
+      };
     } catch (error) {
       console.error('[Messages] Get thread error:', error.message);
       return handleNetworkError(error, 'Failed to fetch thread');
@@ -287,7 +363,15 @@ const register = (ipcMain, store, getSocketService) => {
         };
       }
 
-      return { success: true, data: response.data };
+      // Normalize search results
+      const rawMessages = response.data?.data || [];
+      return {
+        success: true,
+        data: {
+          ...response.data,
+          data: rawMessages.map(normalizeMessage),
+        },
+      };
     } catch (error) {
       console.error('[Messages] Search error:', error.message);
       return handleNetworkError(error, 'Search failed');
@@ -318,7 +402,15 @@ const register = (ipcMain, store, getSocketService) => {
         };
       }
 
-      return { success: true, data: response.data };
+      // Normalize pinned messages
+      const rawMessages = response.data?.data || [];
+      return {
+        success: true,
+        data: {
+          ...response.data,
+          data: rawMessages.map(normalizeMessage),
+        },
+      };
     } catch (error) {
       console.error('[Messages] Get pinned error:', error.message);
       return handleNetworkError(error, 'Failed to fetch pinned messages');

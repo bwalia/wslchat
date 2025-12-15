@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../hooks/useAppDispatch';
-import { fetchChannels, setCurrentChannel } from '../store/slices/channelSlice';
+import { fetchChannels } from '../store/slices/channelSlice';
 
 // Components
 import Sidebar from './Sidebar/Sidebar';
@@ -9,11 +8,14 @@ import ChannelView from './Channel/ChannelView';
 import ThreadPanel from './Thread/ThreadPanel';
 import WelcomeView from './Channel/WelcomeView';
 import CreateChannelModal from './Channel/CreateChannelModal';
+import InviteUserModal from './Channel/InviteUserModal';
+import InvitationsPanel from './Invitations/InvitationsPanel';
 import SettingsModal from './Settings/SettingsModal';
 
 const MainLayout: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { threadPanelOpen, createChannelOpen, settingsOpen } = useAppSelector((state) => state.ui);
+  const { threadPanelOpen, createChannelOpen, inviteUserOpen, settingsOpen } = useAppSelector((state) => state.ui);
+  const { invitesPanelOpen } = useAppSelector((state) => state.invite);
   const { currentChannel, channels } = useAppSelector((state) => state.channel);
 
   // Fetch channels on mount
@@ -66,6 +68,13 @@ const MainLayout: React.FC = () => {
 
       {/* Modals */}
       {createChannelOpen && <CreateChannelModal />}
+      {inviteUserOpen && currentChannel && (
+        <InviteUserModal
+          channelUuid={currentChannel.uuid}
+          channelName={currentChannel.name}
+        />
+      )}
+      {invitesPanelOpen && <InvitationsPanel />}
       {settingsOpen && <SettingsModal />}
     </div>
   );

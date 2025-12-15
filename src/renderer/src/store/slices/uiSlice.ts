@@ -10,6 +10,7 @@ interface UIState {
   searchQuery: string;
   settingsOpen: boolean;
   createChannelOpen: boolean;
+  inviteUserOpen: boolean;
   profileOpen: boolean;
   membersDrawerOpen: boolean;
   settings: AppSettings;
@@ -25,6 +26,7 @@ const initialState: UIState = {
   searchQuery: '',
   settingsOpen: false,
   createChannelOpen: false,
+  inviteUserOpen: false,
   profileOpen: false,
   membersDrawerOpen: false,
   settings: {
@@ -124,6 +126,12 @@ const uiSlice = createSlice({
     closeCreateChannel: (state) => {
       state.createChannelOpen = false;
     },
+    openInviteUser: (state) => {
+      state.inviteUserOpen = true;
+    },
+    closeInviteUser: (state) => {
+      state.inviteUserOpen = false;
+    },
     openProfile: (state) => {
       state.profileOpen = true;
     },
@@ -138,6 +146,14 @@ const uiSlice = createSlice({
     },
     setSocketConnected: (state, action: PayloadAction<boolean>) => {
       state.isSocketConnected = action.payload;
+    },
+    // Reset UI state on logout (keep theme settings)
+    resetUIState: (state) => {
+      return {
+        ...initialState,
+        theme: state.theme,
+        settings: state.settings,
+      };
     },
   },
   extraReducers: (builder) => {
@@ -175,11 +191,14 @@ export const {
   closeSettings,
   openCreateChannel,
   closeCreateChannel,
+  openInviteUser,
+  closeInviteUser,
   openProfile,
   closeProfile,
   toggleMembersDrawer,
   setMembersDrawerOpen,
   setSocketConnected,
+  resetUIState,
 } = uiSlice.actions;
 
 export default uiSlice.reducer;

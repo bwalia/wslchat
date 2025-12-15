@@ -136,8 +136,15 @@ const validReceiveChannels = [
   'member:joined',
   'member:left',
 
+  // Invitation events
+  'invite:received',
+  'invite:accepted',
+  'invite:declined',
+  'invite:expired',
+
   // Notifications
   'notification:show',
+  'notification:clicked',
 ];
 
 // Expose protected methods to renderer

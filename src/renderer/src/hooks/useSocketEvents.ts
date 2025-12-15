@@ -2,8 +2,10 @@ import { useEffect, useCallback } from 'react';
 import { useAppDispatch } from './useAppDispatch';
 import { setSocketConnected } from '../store/slices/uiSlice';
 import { addMessage, messageUpdated, messageDeleted, reactionAdded, reactionRemoved } from '../store/slices/messageSlice';
-import { channelUpdated, memberJoined, memberLeft, incrementUnread } from '../store/slices/channelSlice';
+import { channelUpdated, memberJoined, memberLeft, incrementUnread, fetchChannels } from '../store/slices/channelSlice';
 import { userPresenceUpdated, typingStarted, typingStopped } from '../store/slices/presenceSlice';
+import { inviteReceived, inviteRemoved, setInvitesPanelOpen } from '../store/slices/inviteSlice';
+import type { ChannelInvite } from '../types';
 
 /**
  * Hook to handle socket events and update Redux state
@@ -108,6 +110,47 @@ export const useSocketEvents = () => {
     cleanupFunctions.push(
       window.electronAPI.on('member:left', (data: any) => {
         dispatch(memberLeft(data));
+      })
+    );
+
+    // Invitation events
+    cleanupFunctions.push(
+      window.electronAPI.on('invite:received', (data: ChannelInvite) => {
+        console.log('[Socket] Invite received:', data);
+        dispatch(inviteReceived(data));
+      })
+    );
+
+    cleanupFunctions.push(
+      window.electronAPI.on('invite:accepted', (data: { inviteUuid: string; channelUuid: string }) => {
+        console.log('[Socket] Invite accepted:', data);
+        dispatch(inviteRemoved(data.inviteUuid));
+        // Refresh channels to get the newly joined channel
+        dispatch(fetchChannels({}));
+      })
+    );
+
+    cleanupFunctions.push(
+      window.electronAPI.on('invite:declined', (data: { inviteUuid: string }) => {
+        console.log('[Socket] Invite declined:', data);
+        dispatch(inviteRemoved(data.inviteUuid));
+      })
+    );
+
+    cleanupFunctions.push(
+      window.electronAPI.on('invite:expired', (data: { inviteUuid: string }) => {
+        console.log('[Socket] Invite expired:', data);
+        dispatch(inviteRemoved(data.inviteUuid));
+      })
+    );
+
+    // Notification click handler
+    cleanupFunctions.push(
+      window.electronAPI.on('notification:clicked', (data: any) => {
+        console.log('[Socket] Notification clicked:', data);
+        if (data.type === 'invite') {
+          dispatch(setInvitesPanelOpen(true));
+        }
       })
     );
 

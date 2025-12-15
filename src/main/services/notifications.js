@@ -100,9 +100,22 @@ class NotificationService {
       return;
     }
 
+    // Don't show if window is focused
+    if (this.mainWindow?.isFocused()) {
+      return;
+    }
+
+    // Build inviter name from available fields
+    const inviterName = invite.inviter_first_name && invite.inviter_last_name
+      ? `${invite.inviter_first_name} ${invite.inviter_last_name}`
+      : invite.inviter?.name || 'Someone';
+
+    // Build channel name from available fields
+    const channelName = invite.channel_name || invite.channel?.name || 'a channel';
+
     const notification = new Notification({
       title: 'Channel Invitation',
-      body: `You've been invited to join #${invite.channel?.name || 'a channel'}`,
+      body: `${inviterName} invited you to join #${channelName}`,
       silent: false,
       urgency: 'normal',
       timeoutType: 'default',

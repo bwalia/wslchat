@@ -53,9 +53,16 @@ const register = (ipcMain, store) => {
       }
 
       // Normalize user data - Lapis returns 'id' but we use 'uuid' internally
+      // Also build display name from first_name/last_name if name not present
+      const displayName = user.name ||
+        (user.first_name && user.last_name
+          ? `${user.first_name} ${user.last_name}`
+          : user.username || user.email || 'User');
+
       const normalizedUser = {
         ...user,
         uuid: user.uuid || user.id, // Lapis returns 'id', normalize to 'uuid'
+        name: displayName,
       };
 
       // Validate user has required fields
@@ -150,9 +157,16 @@ const register = (ipcMain, store) => {
       }
 
       // Normalize user data - Lapis returns 'id' but we use 'uuid' internally
+      // Also build display name from first_name/last_name if name not present
+      const displayName = user.name ||
+        (user.first_name && user.last_name
+          ? `${user.first_name} ${user.last_name}`
+          : user.username || user.email || 'User');
+
       const normalizedUser = {
         ...user,
         uuid: user.uuid || user.id,
+        name: displayName,
       };
 
       // Update stored auth data with fresh data

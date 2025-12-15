@@ -6,6 +6,7 @@ export interface User {
   name: string;
   first_name?: string;
   last_name?: string;
+  username?: string;
   avatar_url?: string;
   role: string;
   status?: PresenceStatus;
@@ -44,6 +45,12 @@ export interface ChannelMember {
   last_read_at?: string;
   is_muted: boolean;
   notification_preference: "all" | "mentions" | "none";
+  // User fields returned directly from API (joined from users table)
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  // Legacy nested user object (for backwards compatibility)
   user?: User;
 }
 
@@ -143,14 +150,24 @@ export interface Mention {
 export interface ChannelInvite {
   uuid: string;
   channel_uuid: string;
-  user_uuid: string;
-  invited_by: string;
+  invited_user_uuid: string;
+  invited_by_uuid: string;
   message?: string;
   status: "pending" | "accepted" | "declined" | "expired";
-  expires_at: string;
+  expires_at?: string;
+  responded_at?: string;
+  created_at: string;
+  updated_at?: string;
+  // Joined data from API
+  channel_name?: string;
+  channel_description?: string;
+  channel_type?: "public" | "private" | "direct";
+  inviter_first_name?: string;
+  inviter_last_name?: string;
+  inviter_email?: string;
+  // Computed/nested
   channel?: Channel;
   inviter?: User;
-  created_at: string;
 }
 
 // API Response types

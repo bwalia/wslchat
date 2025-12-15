@@ -54,7 +54,7 @@ const register = (ipcMain, store) => {
 
     try {
       const api = createApiClient(store);
-      const response = await api.get(`/api/users/${userUuid}`);
+      const response = await api.get(`/api/v2/users/${userUuid}`);
 
       if (response.status >= 400) {
         return {
@@ -86,7 +86,7 @@ const register = (ipcMain, store) => {
     try {
       const auth = store.get('auth');
       const api = createApiClient(store);
-      const response = await api.put(`/api/users/${auth.user.uuid}`, profileData);
+      const response = await api.put(`/api/v2/users/${auth.user.uuid}`, profileData);
 
       if (response.status >= 400) {
         return {
@@ -124,8 +124,8 @@ const register = (ipcMain, store) => {
 
     try {
       const api = createApiClient(store);
-      const response = await api.get('/api/users', {
-        params: { search: query.trim(), ...params },
+      const response = await api.get('/api/v2/users/search', {
+        params: { q: query.trim(), ...params },
       });
 
       if (response.status >= 400) {
