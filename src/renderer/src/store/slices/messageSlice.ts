@@ -221,13 +221,42 @@ const messageSlice = createSlice({
   reducers: {
     addMessage: (state, action: PayloadAction<{ channelUuid: string; message: Message }>) => {
       const { channelUuid, message } = action.payload;
-      if (!state.messages[channelUuid]) {
-        state.messages[channelUuid] = [];
-      }
-      // Check if message already exists
-      const exists = state.messages[channelUuid].some((m) => m.uuid === message.uuid);
-      if (!exists) {
-        state.messages[channelUuid].push(message);
+      const parentMessageUuid = message.parent_message_uuid;
+
+      if (parentMessageUuid) {
+        // This is a thread reply
+        // Add to thread's replies array if thread is loaded
+        if (state.threads[parentMessageUuid]) {
+          const exists = state.threads[parentMessageUuid].replies?.some(
+            (r) => r.uuid === message.uuid
+          );
+          if (!exists) {
+            if (!state.threads[parentMessageUuid].replies) {
+              state.threads[parentMessageUuid].replies = [];
+            }
+            state.threads[parentMessageUuid].replies.push(message);
+          }
+        }
+
+        // Update parent message's reply_count
+        if (state.messages[channelUuid]) {
+          const parentMessage = state.messages[channelUuid].find(
+            (m) => m.uuid === parentMessageUuid
+          );
+          if (parentMessage) {
+            parentMessage.reply_count = (parentMessage.reply_count || 0) + 1;
+          }
+        }
+      } else {
+        // Regular channel message
+        if (!state.messages[channelUuid]) {
+          state.messages[channelUuid] = [];
+        }
+        // Check if message already exists
+        const exists = state.messages[channelUuid].some((m) => m.uuid === message.uuid);
+        if (!exists) {
+          state.messages[channelUuid].push(message);
+        }
       }
     },
     messageUpdated: (state, action: PayloadAction<Message>) => {
@@ -315,6 +344,8 @@ const messageSlice = createSlice({
     clearThread: (state, action: PayloadAction<string>) => {
       delete state.threads[action.payload];
     },
+    // Reset entire state on logout
+    resetMessageState: () => initialState,
   },
   extraReducers: (builder) => {
     // Fetch messages
@@ -357,13 +388,43 @@ const messageSlice = createSlice({
       .addCase(sendMessage.fulfilled, (state, action) => {
         state.isSending = false;
         const { channelUuid, message } = action.payload;
-        if (!state.messages[channelUuid]) {
-          state.messages[channelUuid] = [];
-        }
-        // Avoid duplicates
-        const exists = state.messages[channelUuid].some((m) => m.uuid === message.uuid);
-        if (!exists) {
-          state.messages[channelUuid].push(message);
+
+        // Check if this is a thread reply
+        const parentMessageUuid = message.parent_message_uuid;
+
+        if (parentMessageUuid) {
+          // This is a thread reply - add to thread's replies array
+          if (state.threads[parentMessageUuid]) {
+            const exists = state.threads[parentMessageUuid].replies?.some(
+              (r) => r.uuid === message.uuid
+            );
+            if (!exists) {
+              if (!state.threads[parentMessageUuid].replies) {
+                state.threads[parentMessageUuid].replies = [];
+              }
+              state.threads[parentMessageUuid].replies.push(message);
+            }
+          }
+
+          // Update parent message's reply_count in the channel messages
+          if (state.messages[channelUuid]) {
+            const parentMessage = state.messages[channelUuid].find(
+              (m) => m.uuid === parentMessageUuid
+            );
+            if (parentMessage) {
+              parentMessage.reply_count = (parentMessage.reply_count || 0) + 1;
+            }
+          }
+        } else {
+          // Regular message - add to channel messages
+          if (!state.messages[channelUuid]) {
+            state.messages[channelUuid] = [];
+          }
+          // Avoid duplicates
+          const exists = state.messages[channelUuid].some((m) => m.uuid === message.uuid);
+          if (!exists) {
+            state.messages[channelUuid].push(message);
+          }
         }
       })
       .addCase(sendMessage.rejected, (state, action) => {
@@ -462,6 +523,7 @@ export const {
   reactionRemoved,
   clearChannelMessages,
   clearThread,
+  resetMessageState,
 } = messageSlice.actions;
 
 export default messageSlice.reducer;

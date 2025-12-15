@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from './hooks/useAppDispatch';
 import { checkStoredAuth } from './store/slices/authSlice';
 import { loadSettings } from './store/slices/uiSlice';
+import { fetchPendingInvites } from './store/slices/inviteSlice';
 import { useSocketEvents } from './hooks/useSocketEvents';
 
 // Components
@@ -41,6 +42,27 @@ const App: React.FC = () => {
       }
     }
   }, [theme]);
+
+  // Fetch pending invites when authenticated and poll periodically
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Fetch immediately on auth
+      dispatch(fetchPendingInvites());
+
+      // Poll every 30 seconds for new invitations (until socket is available)
+      pollIntervalRef.current = setInterval(() => {
+        dispatch(fetchPendingInvites());
+      }, 30000);
+    }
+
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
+  }, [isAuthenticated, dispatch]);
 
   // Show loading screen while checking auth
   if (!isInitialized) {

@@ -1,6 +1,15 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import type { Channel, ChannelMember, PaginatedResponse } from '../../types';
 
+interface InviteUser {
+  uuid: string;
+  email: string;
+  name: string;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+}
+
 interface ChannelState {
   channels: Channel[];
   currentChannel: Channel | null;
@@ -10,6 +19,12 @@ interface ChannelState {
   error: string | null;
   searchResults: Channel[];
   isSearching: boolean;
+  // Invite state
+  inviteSearchResults: InviteUser[];
+  isSearchingUsers: boolean;
+  isInviting: boolean;
+  inviteError: string | null;
+  inviteSuccess: boolean;
 }
 
 const initialState: ChannelState = {
@@ -21,6 +36,12 @@ const initialState: ChannelState = {
   error: null,
   searchResults: [],
   isSearching: false,
+  // Invite state
+  inviteSearchResults: [],
+  isSearchingUsers: false,
+  isInviting: false,
+  inviteError: null,
+  inviteSuccess: false,
 };
 
 // Async thunks
@@ -234,6 +255,63 @@ export const markChannelAsRead = createAsyncThunk<string, string>(
   }
 );
 
+// Invite user to channel
+export const inviteUserToChannel = createAsyncThunk<
+  { channelUuid: string; userUuid: string },
+  { channelUuid: string; userUuid: string; message?: string; expiresInHours?: number }
+>(
+  'channel/inviteUser',
+  async ({ channelUuid, userUuid, message, expiresInHours }, { rejectWithValue }) => {
+    try {
+      const result = await window.electronAPI.invoke('invites:send', {
+        channelUuid,
+        userUuid,
+        message,
+        expiresInHours,
+      });
+      if (!result.success) {
+        return rejectWithValue(result.error || 'Failed to send invite');
+      }
+      return { channelUuid, userUuid };
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to send invite');
+    }
+  }
+);
+
+// Search users to invite
+export const searchUsersToInvite = createAsyncThunk<
+  Array<{ uuid: string; email: string; name: string; first_name?: string; last_name?: string; username?: string }>,
+  { query: string; channelUuid: string }
+>(
+  'channel/searchUsersToInvite',
+  async ({ query }, { rejectWithValue }) => {
+    try {
+      const result = await window.electronAPI.invoke('users:search', {
+        query,
+        params: { limit: 20 },
+      });
+      if (!result.success) {
+        return rejectWithValue(result.error || 'Search failed');
+      }
+      // Normalize user data
+      const users = result.data?.data || [];
+      return users.map((user: any) => ({
+        uuid: user.uuid || user.id,
+        email: user.email || '',
+        name: user.name || (user.first_name && user.last_name
+          ? `${user.first_name} ${user.last_name}`
+          : user.username || user.email || 'Unknown'),
+        first_name: user.first_name,
+        last_name: user.last_name,
+        username: user.username,
+      }));
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Search failed');
+    }
+  }
+);
+
 const channelSlice = createSlice({
   name: 'channel',
   initialState,
@@ -288,6 +366,18 @@ const channelSlice = createSlice({
         channel.member_count -= 1;
       }
     },
+    clearInviteState: (state) => {
+      state.inviteSearchResults = [];
+      state.isSearchingUsers = false;
+      state.isInviting = false;
+      state.inviteError = null;
+      state.inviteSuccess = false;
+    },
+    clearInviteError: (state) => {
+      state.inviteError = null;
+    },
+    // Reset entire state on logout
+    resetChannelState: () => initialState,
   },
   extraReducers: (builder) => {
     // Fetch channels
@@ -397,6 +487,39 @@ const channelSlice = createSlice({
         channel.unread_count = 0;
       }
     });
+
+    // Search users to invite
+    builder
+      .addCase(searchUsersToInvite.pending, (state) => {
+        state.isSearchingUsers = true;
+        state.inviteError = null;
+      })
+      .addCase(searchUsersToInvite.fulfilled, (state, action) => {
+        state.isSearchingUsers = false;
+        state.inviteSearchResults = action.payload;
+      })
+      .addCase(searchUsersToInvite.rejected, (state, action) => {
+        state.isSearchingUsers = false;
+        state.inviteError = action.payload as string;
+      });
+
+    // Invite user to channel
+    builder
+      .addCase(inviteUserToChannel.pending, (state) => {
+        state.isInviting = true;
+        state.inviteError = null;
+        state.inviteSuccess = false;
+      })
+      .addCase(inviteUserToChannel.fulfilled, (state) => {
+        state.isInviting = false;
+        state.inviteSuccess = true;
+        state.inviteError = null;
+      })
+      .addCase(inviteUserToChannel.rejected, (state, action) => {
+        state.isInviting = false;
+        state.inviteError = action.payload as string;
+        state.inviteSuccess = false;
+      });
   },
 });
 
@@ -408,6 +531,9 @@ export const {
   channelUpdated,
   memberJoined,
   memberLeft,
+  clearInviteState,
+  clearInviteError,
+  resetChannelState,
 } = channelSlice.actions;
 
 export default channelSlice.reducer;

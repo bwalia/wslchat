@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import type { Message } from '../../types';
 import MessageItem from './MessageItem';
+import { parseApiDate } from '../../utils/date';
 
 interface MessageListProps {
   messages: Message[];
@@ -52,7 +53,7 @@ const MessageList: React.FC<MessageListProps> = ({
   // Group messages by date
   const groupedMessages = safeMessages.reduce<{ date: string; messages: Message[] }[]>(
     (groups, message) => {
-      const date = new Date(message.created_at).toLocaleDateString('en-US', {
+      const date = parseApiDate(message.created_at).toLocaleDateString('en-US', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',

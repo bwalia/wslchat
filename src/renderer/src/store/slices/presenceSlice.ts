@@ -188,6 +188,8 @@ const presenceSlice = createSlice({
     clearChannelTyping: (state, action: PayloadAction<string>) => {
       delete state.typingUsers[action.payload];
     },
+    // Reset entire state on logout
+    resetPresenceState: () => initialState,
   },
   extraReducers: (builder) => {
     // Update my presence
@@ -235,6 +237,7 @@ export const {
   typingStopped,
   clearStaleTypingIndicators,
   clearChannelTyping,
+  resetPresenceState,
 } = presenceSlice.actions;
 
 export default presenceSlice.reducer;

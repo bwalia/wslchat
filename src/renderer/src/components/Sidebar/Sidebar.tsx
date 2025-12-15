@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../../hooks/useAppDispatch';
 import { setCurrentChannel, markChannelAsRead } from '../../store/slices/channelSlice';
 import { openCreateChannel, openSettings, toggleSidebar } from '../../store/slices/uiSlice';
 import { logout } from '../../store/slices/authSlice';
+import { fetchPendingInvites, setInvitesPanelOpen } from '../../store/slices/inviteSlice';
 import type { Channel } from '../../types';
 import clsx from 'clsx';
 
@@ -11,6 +12,12 @@ const Sidebar: React.FC = () => {
   const { user } = useAppSelector((state) => state.auth);
   const { channels, currentChannel } = useAppSelector((state) => state.channel);
   const { sidebarCollapsed, isSocketConnected } = useAppSelector((state) => state.ui);
+  const { pendingInvites } = useAppSelector((state) => state.invite);
+
+  // Fetch pending invites on mount
+  useEffect(() => {
+    dispatch(fetchPendingInvites());
+  }, [dispatch]);
 
   // Separate channels by type
   const publicChannels = channels.filter((c) => c.type === 'public');
@@ -97,6 +104,41 @@ const Sidebar: React.FC = () => {
               <p className="text-xs text-sidebar-text truncate">Active</p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Invitations Button */}
+      {!sidebarCollapsed && (
+        <div className="px-2 py-2 border-b border-sidebar-hover">
+          <button
+            onClick={() => dispatch(setInvitesPanelOpen(true))}
+            className={clsx(
+              'sidebar-item w-full',
+              pendingInvites.length > 0 && 'text-primary-400 hover:text-primary-300'
+            )}
+          >
+            <div className="relative mr-2">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+              {pendingInvites.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-accent-red rounded-full flex items-center justify-center text-[10px] font-bold text-white">
+                  {pendingInvites.length > 9 ? '9+' : pendingInvites.length}
+                </span>
+              )}
+            </div>
+            <span className="flex-1 text-left">Invitations</span>
+            {pendingInvites.length > 0 && (
+              <span className="text-xs bg-accent-red/20 text-accent-red px-2 py-0.5 rounded-full">
+                {pendingInvites.length} new
+              </span>
+            )}
+          </button>
         </div>
       )}
 

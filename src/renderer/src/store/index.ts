@@ -4,6 +4,7 @@ import channelReducer from './slices/channelSlice';
 import messageReducer from './slices/messageSlice';
 import uiReducer from './slices/uiSlice';
 import presenceReducer from './slices/presenceSlice';
+import inviteReducer from './slices/inviteSlice';
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
     message: messageReducer,
     ui: uiReducer,
     presence: presenceReducer,
+    invite: inviteReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

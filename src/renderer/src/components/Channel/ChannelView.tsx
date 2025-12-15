@@ -44,7 +44,7 @@ const ChannelView: React.FC = () => {
   const channelMessages = messages[currentChannel.uuid] || [];
   const channelMembers = members[currentChannel.uuid] || [];
   const channelTypingUsers = typingUsers[currentChannel.uuid]?.filter(
-    (t) => t.userUuid !== user?.id
+    (t) => t.userUuid !== user?.uuid
   ) || [];
   const canLoadMore = hasMore[currentChannel.uuid];
 

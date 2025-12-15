@@ -287,6 +287,24 @@ const initializeServices = () => {
   socketService.on('member:left', (data) => {
     mainWindow?.webContents.send('member:left', data);
   });
+
+  // Invitation events
+  socketService.on('invite:received', (data) => {
+    mainWindow?.webContents.send('invite:received', data);
+    notificationService.showChannelInviteNotification(data);
+  });
+
+  socketService.on('invite:accepted', (data) => {
+    mainWindow?.webContents.send('invite:accepted', data);
+  });
+
+  socketService.on('invite:declined', (data) => {
+    mainWindow?.webContents.send('invite:declined', data);
+  });
+
+  socketService.on('invite:expired', (data) => {
+    mainWindow?.webContents.send('invite:expired', data);
+  });
 };
 
 /**

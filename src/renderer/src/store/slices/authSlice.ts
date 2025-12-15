@@ -51,11 +51,26 @@ export const login = createAsyncThunk<AuthResponse, LoginCredentials>(
 
 export const logout = createAsyncThunk(
   "auth/logout",
-  async (_, { rejectWithValue }) => {
+  async (_, { dispatch, rejectWithValue }) => {
     try {
       // Disconnect socket before logout
       await window.electronAPI.invoke("socket:disconnect");
       const result = await window.electronAPI.invoke("auth:logout");
+
+      // Import and dispatch reset actions for all slices
+      // This ensures clean state for next user session
+      const { resetChannelState } = await import("./channelSlice");
+      const { resetMessageState } = await import("./messageSlice");
+      const { resetPresenceState } = await import("./presenceSlice");
+      const { resetUIState } = await import("./uiSlice");
+      const { resetInviteState } = await import("./inviteSlice");
+
+      dispatch(resetChannelState());
+      dispatch(resetMessageState());
+      dispatch(resetPresenceState());
+      dispatch(resetUIState());
+      dispatch(resetInviteState());
+
       if (!result.success) {
         return rejectWithValue(result.error || "Logout failed");
       }
