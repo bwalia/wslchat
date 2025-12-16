@@ -176,7 +176,7 @@ const CreateChannelModal: React.FC = () => {
             <button
               type="button"
               onClick={handleClose}
-              className="btn-secondary"
+              className="btn-secondary btn-md"
               disabled={isCreating}
             >
               Cancel
@@ -184,7 +184,7 @@ const CreateChannelModal: React.FC = () => {
             <button
               type="submit"
               disabled={!name.trim() || isCreating}
-              className="btn-primary"
+              className="btn-primary btn-md"
             >
               {isCreating ? (
                 <span className="flex items-center gap-2">

@@ -11,6 +11,7 @@ require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 const config = {
   // API Configuration
   apiUrl: process.env.API_URL || 'http://localhost:80',
+  documentsApiUrl: process.env.DOCUMENTS_API_URL || 'http://localhost:4010',
   socketUrl: process.env.SOCKET_URL || 'http://localhost:80',
 
   // Environment
@@ -26,6 +27,7 @@ const config = {
 if (config.isDev) {
   console.log('=== Application Configuration ===');
   console.log('API_URL:', config.apiUrl);
+  console.log('DOCUMENTS_API_URL:', config.documentsApiUrl);
   console.log('SOCKET_URL:', config.socketUrl);
   console.log('NODE_ENV:', config.nodeEnv);
   console.log('================================');

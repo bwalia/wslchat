@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import type { Message } from '../../types';
 import { useAppDispatch, useAppSelector } from '../../hooks/useAppDispatch';
 import { toggleReaction, deleteMessage, pinMessage, unpinMessage } from '../../store/slices/messageSlice';
@@ -11,6 +12,51 @@ interface MessageItemProps {
   message: Message;
   showAvatar: boolean;
 }
+
+/**
+ * Renders message content based on content type
+ * Supports plain text, code blocks, and rich HTML content
+ */
+const MessageContent: React.FC<{ content: string; contentType: string }> = ({
+  content,
+  contentType,
+}) => {
+  // For code content, render as preformatted block
+  if (contentType === 'code') {
+    return <pre className="code-block">{content}</pre>;
+  }
+
+  // Check if content contains HTML formatting
+  const hasHtmlTags = /<[a-z][\s\S]*>/i.test(content);
+
+  if (hasHtmlTags || contentType === 'markdown') {
+    // Sanitize HTML to prevent XSS attacks
+    const sanitizedHtml = DOMPurify.sanitize(content, {
+      ALLOWED_TAGS: [
+        'b', 'i', 'u', 's', 'strong', 'em', 'a', 'br',
+        'ul', 'ol', 'li', 'p', 'code', 'pre', 'span',
+      ],
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
+      ADD_ATTR: ['target'], // Add target="_blank" for links
+    });
+
+    // Add target="_blank" and rel="noopener noreferrer" to all links
+    const processedHtml = sanitizedHtml.replace(
+      /<a\s+href=/g,
+      '<a target="_blank" rel="noopener noreferrer" href='
+    );
+
+    return (
+      <div
+        className="rich-text-content whitespace-pre-wrap break-words"
+        dangerouslySetInnerHTML={{ __html: processedHtml }}
+      />
+    );
+  }
+
+  // Plain text content - preserve whitespace and line breaks
+  return <p className="whitespace-pre-wrap break-words">{content}</p>;
+};
 
 const MessageItem: React.FC<MessageItemProps> = ({ message, showAvatar }) => {
   const dispatch = useAppDispatch();
@@ -54,7 +100,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, showAvatar }) => {
   if (message.is_deleted) {
     return (
       <div className={clsx('message', !showAvatar && 'pl-16')}>
-        <p className="text-gray-400 dark:text-gray-500 italic text-sm">
+        <p className="text-secondary-400 dark:text-secondary-500 italic text-sm">
           This message was deleted
         </p>
       </div>
@@ -72,12 +118,12 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, showAvatar }) => {
     >
       {/* Avatar */}
       {showAvatar ? (
-        <div className="avatar-md bg-primary-500 flex items-center justify-center text-white font-medium flex-shrink-0">
+        <div className="avatar-md gradient-primary flex items-center justify-center text-white font-medium flex-shrink-0 shadow-primary">
           {message.user?.name?.charAt(0)?.toUpperCase() || 'U'}
         </div>
       ) : (
         <div className="w-9 flex-shrink-0 flex items-center justify-center">
-          <span className="text-2xs text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
+          <span className="text-2xs text-secondary-400 dark:text-secondary-500 opacity-0 group-hover:opacity-100 transition-opacity">
             {formattedTime}
           </span>
         </div>
@@ -88,49 +134,52 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, showAvatar }) => {
         {/* Header */}
         {showAvatar && (
           <div className="flex items-baseline gap-2 mb-0.5">
-            <span className="font-bold text-gray-900 dark:text-white">
+            <span className="font-bold text-secondary-900 dark:text-white">
               {message.user?.name || 'Unknown User'}
             </span>
             <span className="message-time">{formattedTime}</span>
             {message.is_edited && (
-              <span className="text-xs text-gray-400 dark:text-gray-500">(edited)</span>
+              <span className="text-xs text-secondary-400 dark:text-secondary-500">(edited)</span>
             )}
             {message.is_pinned && (
-              <span className="badge-primary text-2xs">Pinned</span>
+              <span className="badge-primary badge-sm">Pinned</span>
             )}
           </div>
         )}
 
         {/* Message Content */}
         <div className="message-content">
-          {message.content_type === 'code' ? (
-            <pre className="code-block">{message.content}</pre>
-          ) : (
-            <p className="whitespace-pre-wrap break-words">{message.content}</p>
-          )}
+          <MessageContent content={message.content} contentType={message.content_type} />
         </div>
 
         {/* Attachments */}
         {message.attachments && message.attachments.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
-            {message.attachments.map((attachment) => (
+            {message.attachments.map((attachment, index) => (
               <div
-                key={attachment.uuid}
-                className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+                key={attachment.uuid || `${message.uuid}-attachment-${index}`}
+                className="rounded-lg border border-secondary-200 dark:border-secondary-700 overflow-hidden"
               >
-                {attachment.file_type.startsWith('image/') ? (
-                  <img
-                    src={attachment.file_url}
-                    alt={attachment.file_name}
-                    className="max-w-xs max-h-64 object-cover"
-                  />
+                {attachment.file_type?.startsWith('image/') ? (
+                  <a href={attachment.file_url} target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={attachment.file_url}
+                      alt={attachment.file_name}
+                      className="max-w-xs max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                    />
+                  </a>
                 ) : (
-                  <div className="px-3 py-2 flex items-center gap-2">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <a
+                    href={attachment.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-2 flex items-center gap-2 hover:bg-secondary-50 dark:hover:bg-secondary-700/50 transition-colors"
+                  >
+                    <svg className="w-5 h-5 text-secondary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                     </svg>
-                    <span className="text-sm text-gray-600 dark:text-gray-300">{attachment.file_name}</span>
-                  </div>
+                    <span className="text-sm text-secondary-600 dark:text-secondary-300">{attachment.file_name}</span>
+                  </a>
                 )}
               </div>
             ))}
@@ -178,7 +227,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, showAvatar }) => {
 
       {/* Hover Actions */}
       {showActions && (
-        <div className="absolute -top-3 right-4 flex items-center gap-0.5 bg-white dark:bg-gray-800 rounded-lg shadow-dropdown border border-gray-200 dark:border-gray-700 p-0.5">
+        <div className="absolute -top-3 right-4 flex items-center gap-0.5 bg-white dark:bg-secondary-800 rounded-xl shadow-lg border border-secondary-200 dark:border-secondary-700 p-1">
           {/* Quick Reactions */}
           {quickEmojis.slice(0, 3).map((emoji) => (
             <button
@@ -202,7 +251,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, showAvatar }) => {
             </svg>
           </button>
 
-          <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1" />
+          <div className="w-px h-5 bg-secondary-200 dark:bg-secondary-700 mx-1" />
 
           {/* Reply in Thread */}
           <button
@@ -230,7 +279,7 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, showAvatar }) => {
           {isOwnMessage && (
             <button
               onClick={handleDelete}
-              className="emoji-btn text-red-500 hover:text-red-600"
+              className="emoji-btn text-error-500 hover:text-error-600"
               title="Delete message"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -243,13 +292,13 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, showAvatar }) => {
 
       {/* Emoji Picker */}
       {showEmojiPicker && (
-        <div className="absolute top-8 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-dropdown border border-gray-200 dark:border-gray-700 p-2 z-10">
+        <div className="absolute top-8 right-4 bg-white dark:bg-secondary-800 rounded-xl shadow-xl border border-secondary-200 dark:border-secondary-700 p-2 z-10">
           <div className="grid grid-cols-6 gap-1">
             {['👍', '👎', '❤️', '😂', '😮', '😢', '😡', '🎉', '🤔', '👀', '🔥', '💯'].map((emoji) => (
               <button
                 key={emoji}
                 onClick={() => handleReaction(emoji)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-lg"
+                className="p-2 hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-lg text-lg transition-colors"
               >
                 {emoji}
               </button>

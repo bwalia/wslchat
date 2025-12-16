@@ -75,7 +75,7 @@ export interface Message {
 }
 
 export interface Attachment {
-  uuid: string;
+  uuid?: string;
   file_name: string;
   file_type: string;
   file_size: number;
@@ -84,6 +84,7 @@ export interface Attachment {
   width?: number;
   height?: number;
   duration?: number;
+  key?: string;
 }
 
 export interface ReactionGroup {

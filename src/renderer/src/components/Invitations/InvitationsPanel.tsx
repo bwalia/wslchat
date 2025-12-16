@@ -193,7 +193,7 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
           onClick={onAccept}
           disabled={isProcessing}
           className={clsx(
-            'flex-1 btn-primary py-2 text-sm font-medium',
+            'flex-1 btn-primary btn-sm',
             isProcessing && 'opacity-75 cursor-not-allowed'
           )}
         >
@@ -215,7 +215,7 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
           onClick={onDecline}
           disabled={isProcessing}
           className={clsx(
-            'flex-1 btn-secondary py-2 text-sm font-medium',
+            'flex-1 btn-secondary btn-sm',
             isProcessing && 'opacity-75 cursor-not-allowed'
           )}
         >
@@ -489,7 +489,7 @@ const InvitationsPanel: React.FC = () => {
 
         {/* Footer */}
         <div className="flex justify-end px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-          <button onClick={handleClose} className="btn-secondary">
+          <button onClick={handleClose} className="btn-secondary btn-md">
             Close
           </button>
         </div>

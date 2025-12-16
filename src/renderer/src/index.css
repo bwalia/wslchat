@@ -1,21 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Base styles */
+/* ============================================
+ * BASE STYLES
+ * ============================================ */
 @layer base {
   * {
     @apply box-border;
   }
 
   html {
-    @apply h-full;
+    @apply h-full scroll-smooth;
   }
 
   body {
-    @apply h-full m-0 text-gray-900 dark:text-gray-100 bg-white dark:bg-channel-bgDark;
-    font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    @apply h-full m-0 bg-secondary-50 text-secondary-900 dark:bg-secondary-900 dark:text-secondary-100;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -30,220 +34,548 @@
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-transparent;
+    @apply bg-secondary-100 dark:bg-secondary-800;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+    @apply bg-secondary-300 dark:bg-secondary-600 rounded;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-400 dark:bg-gray-600;
+    @apply bg-secondary-400 dark:bg-secondary-500;
+  }
+
+  /* Focus states */
+  *:focus-visible {
+    @apply outline-2 outline-primary-500 outline-offset-2;
   }
 
   /* Selection */
   ::selection {
-    @apply bg-primary-500/30;
+    @apply bg-primary-100 text-primary-900;
   }
 }
 
-/* Component styles */
+/* ============================================
+ * COMPONENT STYLES
+ * ============================================ */
 @layer components {
-  /* Sidebar styles */
+  /* ----------------------------------------
+   * SIDEBAR
+   * ---------------------------------------- */
   .sidebar {
-    @apply bg-sidebar dark:bg-sidebar-dark text-sidebar-text;
+    @apply bg-secondary-900 dark:bg-secondary-950 text-secondary-400 border-r border-secondary-700;
   }
 
   .sidebar-item {
-    @apply flex items-center px-4 py-1.5 rounded-md cursor-pointer
-           text-sidebar-text hover:text-sidebar-textHover hover:bg-sidebar-hover
-           transition-colors duration-150;
+    @apply flex items-center px-3 py-2 rounded-lg cursor-pointer
+           text-secondary-400 hover:text-white hover:bg-secondary-800
+           transition-all duration-200;
   }
 
   .sidebar-item.active {
-    @apply bg-sidebar-active text-white;
+    @apply bg-primary-500/10 text-primary-500 border-l-4 border-primary-500 rounded-l-none;
   }
 
-  /* Channel header */
+  .sidebar-section-title {
+    @apply px-3 py-2 text-xs font-semibold text-secondary-500 uppercase tracking-wider;
+  }
+
+  /* ----------------------------------------
+   * CHANNEL HEADER
+   * ---------------------------------------- */
   .channel-header {
-    @apply flex items-center justify-between px-4 py-3
-           border-b border-channel-border dark:border-channel-borderDark
-           bg-channel-bg dark:bg-channel-bgDark;
+    @apply flex items-center justify-between px-6 py-4
+           border-b border-secondary-200 dark:border-secondary-700
+           bg-white dark:bg-secondary-900;
   }
 
-  /* Message styles */
+  /* ----------------------------------------
+   * MESSAGES
+   * ---------------------------------------- */
   .message {
-    @apply flex gap-3 px-5 py-2 hover:bg-message-hover dark:hover:bg-message-hoverDark
-           transition-colors duration-100;
+    @apply flex gap-3 px-5 py-2 hover:bg-secondary-50 dark:hover:bg-secondary-800
+           transition-colors duration-150;
   }
 
   .message-content {
-    @apply text-gray-900 dark:text-gray-100 leading-relaxed break-words;
+    @apply text-secondary-900 dark:text-secondary-100 leading-relaxed break-words;
   }
 
   .message-time {
-    @apply text-xs text-gray-500 dark:text-gray-400;
+    @apply text-xs text-secondary-400;
   }
 
-  /* Input styles */
+  /* ----------------------------------------
+   * INPUTS
+   * ---------------------------------------- */
   .input-field {
-    @apply w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600
-           bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
-           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-           placeholder-gray-400 dark:placeholder-gray-500
-           transition-colors duration-150;
+    @apply w-full px-4 py-2.5 rounded-lg border text-sm
+           bg-white dark:bg-secondary-800
+           text-secondary-900 dark:text-secondary-100
+           border-secondary-300 dark:border-secondary-600
+           placeholder:text-secondary-400 dark:placeholder:text-secondary-500
+           hover:border-secondary-400 dark:hover:border-secondary-500
+           focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500
+           disabled:bg-secondary-50 dark:disabled:bg-secondary-800
+           disabled:text-secondary-500 disabled:cursor-not-allowed
+           transition-colors duration-200;
   }
 
-  /* Button styles */
+  .input-error {
+    @apply border-error-500 focus:ring-error-500/20 focus:border-error-500;
+  }
+
+  .input-label {
+    @apply block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1.5;
+  }
+
+  .input-helper {
+    @apply mt-1.5 text-sm text-secondary-500;
+  }
+
+  .input-error-text {
+    @apply mt-1.5 text-sm text-error-500;
+  }
+
+  /* ----------------------------------------
+   * BUTTONS
+   * ---------------------------------------- */
   .btn {
-    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium
-           transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2
+    @apply inline-flex items-center justify-center font-medium rounded-lg
+           transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-offset-2
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
+  .btn-sm {
+    @apply h-9 px-4 text-sm gap-2;
+  }
+
+  .btn-md {
+    @apply h-11 px-5 text-sm gap-2.5;
+  }
+
+  .btn-lg {
+    @apply h-12 px-8 text-base gap-3;
+  }
+
   .btn-primary {
-    @apply btn bg-primary-600 text-white hover:bg-primary-700
-           focus:ring-primary-500;
+    @apply btn bg-primary-500 text-white
+           hover:bg-primary-600 focus:ring-primary-500
+           shadow-sm hover:shadow-md;
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 4px 14px 0 rgba(230, 0, 63, 0.25);
   }
 
   .btn-secondary {
-    @apply btn bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200
-           hover:bg-gray-200 dark:hover:bg-gray-600 focus:ring-gray-500;
+    @apply btn bg-secondary-800 text-white
+           hover:bg-secondary-900 focus:ring-secondary-500
+           shadow-sm hover:shadow-md;
+  }
+
+  .btn-outline {
+    @apply btn border-2 border-primary-500 text-primary-500
+           hover:bg-primary-50 dark:hover:bg-primary-950 focus:ring-primary-500;
   }
 
   .btn-ghost {
-    @apply btn bg-transparent text-gray-600 dark:text-gray-300
-           hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-gray-500;
+    @apply btn text-secondary-600 dark:text-secondary-400
+           hover:bg-secondary-100 dark:hover:bg-secondary-800
+           hover:text-secondary-900 dark:hover:text-white focus:ring-secondary-500;
   }
 
   .btn-danger {
-    @apply btn bg-accent-red text-white hover:bg-red-600 focus:ring-red-500;
+    @apply btn bg-error-500 text-white
+           hover:bg-error-600 focus:ring-error-500
+           shadow-sm hover:shadow-md;
   }
 
-  /* Badge styles */
+  .btn-success {
+    @apply btn bg-success-500 text-white
+           hover:bg-success-600 focus:ring-success-500
+           shadow-sm hover:shadow-md;
+  }
+
+  /* ----------------------------------------
+   * BADGES
+   * ---------------------------------------- */
   .badge {
-    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center font-medium rounded-full;
+  }
+
+  .badge-sm {
+    @apply px-2 py-0.5 text-xs;
+  }
+
+  .badge-md {
+    @apply px-2.5 py-1 text-xs;
+  }
+
+  .badge-default {
+    @apply badge bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300;
   }
 
   .badge-primary {
-    @apply badge bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200;
+    @apply badge bg-primary-500/10 text-primary-600 dark:text-primary-400;
+  }
+
+  .badge-success {
+    @apply badge bg-success-500/10 text-success-600 dark:text-success-400;
+  }
+
+  .badge-warning {
+    @apply badge bg-warning-500/10 text-warning-600 dark:text-warning-500;
+  }
+
+  .badge-error {
+    @apply badge bg-error-500/10 text-error-600 dark:text-error-400;
+  }
+
+  .badge-info {
+    @apply badge bg-info-500/10 text-info-600 dark:text-info-400;
   }
 
   .badge-green {
-    @apply badge bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+    @apply badge bg-success-500/10 text-success-600 dark:text-success-400;
   }
 
   .badge-red {
-    @apply badge bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200;
+    @apply badge bg-error-500/10 text-error-600 dark:text-error-400;
   }
 
-  /* Avatar styles */
+  /* ----------------------------------------
+   * CARDS
+   * ---------------------------------------- */
+  .card {
+    @apply bg-white dark:bg-secondary-800 rounded-xl;
+  }
+
+  .card-default {
+    @apply card border border-secondary-200 dark:border-secondary-700;
+  }
+
+  .card-elevated {
+    @apply card shadow-lg border border-secondary-100 dark:border-secondary-700;
+  }
+
+  /* ----------------------------------------
+   * AVATAR
+   * ---------------------------------------- */
   .avatar {
-    @apply rounded-lg overflow-hidden flex-shrink-0 bg-gray-200 dark:bg-gray-700;
+    @apply rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center
+           font-medium text-white;
+  }
+
+  .avatar-gradient {
+    background: linear-gradient(135deg, #ff004e 0%, #e6003f 100%);
   }
 
   .avatar-sm {
-    @apply avatar w-6 h-6;
+    @apply avatar w-6 h-6 text-xs;
   }
 
   .avatar-md {
-    @apply avatar w-9 h-9;
+    @apply avatar w-9 h-9 text-sm;
   }
 
   .avatar-lg {
-    @apply avatar w-12 h-12;
+    @apply avatar w-12 h-12 text-base;
   }
 
-  /* Presence indicator */
+  .avatar-xl {
+    @apply avatar w-16 h-16 text-xl;
+  }
+
+  /* ----------------------------------------
+   * PRESENCE INDICATOR
+   * ---------------------------------------- */
   .presence-indicator {
-    @apply absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800;
+    @apply absolute bottom-0 right-0 w-3 h-3 rounded-full
+           border-2 border-white dark:border-secondary-800;
   }
 
   .presence-online {
-    @apply presence-indicator bg-accent-green;
+    @apply presence-indicator bg-success-500;
   }
 
   .presence-away {
-    @apply presence-indicator bg-accent-yellow;
+    @apply presence-indicator bg-warning-500;
   }
 
   .presence-dnd {
-    @apply presence-indicator bg-accent-red;
+    @apply presence-indicator bg-error-500;
   }
 
   .presence-offline {
-    @apply presence-indicator bg-gray-400;
+    @apply presence-indicator bg-secondary-400;
   }
 
-  /* Tooltip */
-  .tooltip {
-    @apply absolute z-50 px-2 py-1 text-sm text-white bg-gray-900 rounded shadow-lg
-           pointer-events-none whitespace-nowrap;
-  }
-
-  /* Modal */
+  /* ----------------------------------------
+   * MODAL
+   * ---------------------------------------- */
   .modal-overlay {
     @apply fixed inset-0 z-50 flex items-center justify-center
-           bg-black/50 backdrop-blur-sm;
+           bg-secondary-900/50 backdrop-blur-sm;
   }
 
   .modal-content {
-    @apply bg-white dark:bg-gray-800 rounded-xl shadow-modal
-           max-w-lg w-full max-h-[90vh] overflow-auto;
+    @apply bg-white dark:bg-secondary-800 rounded-2xl shadow-2xl
+           max-w-lg w-full max-h-[90vh] overflow-auto
+           border border-secondary-200 dark:border-secondary-700;
   }
 
-  /* Dropdown */
+  .modal-header {
+    @apply flex items-center justify-between p-6 border-b border-secondary-200 dark:border-secondary-700;
+  }
+
+  .modal-body {
+    @apply p-6;
+  }
+
+  .modal-footer {
+    @apply flex items-center justify-end gap-3 p-6
+           border-t border-secondary-200 dark:border-secondary-700;
+  }
+
+  /* ----------------------------------------
+   * DROPDOWN
+   * ---------------------------------------- */
   .dropdown {
-    @apply absolute z-40 mt-1 py-1 bg-white dark:bg-gray-800
-           rounded-lg shadow-dropdown border border-gray-200 dark:border-gray-700;
+    @apply absolute z-40 mt-2 py-2
+           bg-white dark:bg-secondary-800
+           rounded-xl shadow-xl
+           border border-secondary-200 dark:border-secondary-700;
   }
 
   .dropdown-item {
-    @apply flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-200
-           hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer;
+    @apply flex items-center gap-3 px-4 py-2 text-sm
+           text-secondary-700 dark:text-secondary-200
+           hover:bg-secondary-100 dark:hover:bg-secondary-700
+           cursor-pointer transition-colors;
   }
 
-  /* Message input area */
+  .dropdown-item-danger {
+    @apply dropdown-item text-error-600 dark:text-error-400
+           hover:bg-error-50 dark:hover:bg-error-900/20;
+  }
+
+  .dropdown-divider {
+    @apply my-2 border-t border-secondary-200 dark:border-secondary-700;
+  }
+
+  /* ----------------------------------------
+   * MESSAGE INPUT AREA
+   * ---------------------------------------- */
   .message-input-container {
-    @apply flex flex-col mx-5 mb-4 rounded-xl border border-gray-300 dark:border-gray-600
-           bg-white dark:bg-gray-800 focus-within:ring-2 focus-within:ring-primary-500
-           focus-within:border-transparent transition-all duration-150;
+    @apply flex flex-col mx-4 mb-4 rounded-2xl
+           border-2 border-secondary-200 dark:border-secondary-700
+           bg-white dark:bg-secondary-800
+           focus-within:border-primary-500 dark:focus-within:border-primary-500
+           shadow-sm hover:shadow-md focus-within:shadow-lg
+           transition-all duration-300 ease-out;
+  }
+
+  .message-input-container:focus-within {
+    box-shadow: 0 0 0 4px rgba(230, 0, 63, 0.1);
   }
 
   .message-input {
-    @apply w-full p-3 bg-transparent resize-none outline-none
-           text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500;
+    @apply w-full p-4 bg-transparent resize-none outline-none
+           text-secondary-900 dark:text-secondary-100
+           placeholder-secondary-400 dark:placeholder-secondary-500;
   }
 
-  /* Emoji picker button */
+  .message-input-toolbar {
+    @apply flex items-center justify-between px-4 py-3
+           bg-secondary-50 dark:bg-secondary-800/80
+           rounded-b-2xl;
+  }
+
+  .message-input-actions {
+    @apply flex items-center gap-1;
+  }
+
+  .message-input-action-btn {
+    @apply p-2.5 rounded-xl
+           text-secondary-500 hover:text-secondary-700 dark:hover:text-secondary-300
+           hover:bg-secondary-100 dark:hover:bg-secondary-700
+           transition-all duration-200;
+  }
+
+  .message-input-action-btn:hover {
+    transform: scale(1.05);
+  }
+
+  .message-send-btn {
+    @apply flex items-center justify-center
+           w-10 h-10 rounded-xl
+           transition-all duration-200;
+  }
+
+  .message-send-btn.active {
+    @apply bg-primary-500 text-white shadow-md;
+  }
+
+  .message-send-btn.active:hover {
+    @apply bg-primary-600;
+    transform: scale(1.05);
+    box-shadow: 0 4px 14px 0 rgba(230, 0, 63, 0.3);
+  }
+
+  .message-send-btn.disabled {
+    @apply bg-secondary-100 dark:bg-secondary-700 text-secondary-400 cursor-not-allowed;
+  }
+
+  .keyboard-hint {
+    @apply text-xs text-secondary-400 dark:text-secondary-500 hidden sm:flex items-center gap-1.5;
+  }
+
+  .keyboard-hint kbd {
+    @apply px-1.5 py-1 rounded-md
+           bg-secondary-100 dark:bg-secondary-700
+           border border-secondary-200 dark:border-secondary-600
+           font-mono text-2xs font-medium
+           text-secondary-600 dark:text-secondary-400;
+  }
+
+  /* ----------------------------------------
+   * ATTACHMENT PREVIEW
+   * ---------------------------------------- */
+  .attachment-preview-container {
+    @apply px-4 pt-3 pb-2;
+  }
+
+  .attachment-preview-list {
+    @apply flex flex-wrap gap-2;
+  }
+
+  .attachment-preview-item {
+    @apply flex items-center gap-2 px-3 py-2 rounded-xl
+           bg-secondary-100 dark:bg-secondary-700
+           border border-secondary-200 dark:border-secondary-600
+           transition-all duration-200;
+  }
+
+  .attachment-preview-item.uploading {
+    @apply border-primary-300 dark:border-primary-600 bg-primary-50 dark:bg-primary-900/20;
+  }
+
+  .attachment-preview-item.uploaded {
+    @apply border-success-300 dark:border-success-600 bg-success-50 dark:bg-success-900/20;
+  }
+
+  .attachment-preview-item.error {
+    @apply border-error-300 dark:border-error-600 bg-error-50 dark:bg-error-900/20;
+  }
+
+  .attachment-preview-image {
+    @apply w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-secondary-200 dark:bg-secondary-600;
+  }
+
+  .attachment-preview-image img {
+    @apply w-full h-full object-cover;
+  }
+
+  .attachment-preview-icon {
+    @apply w-10 h-10 rounded-lg flex-shrink-0
+           flex items-center justify-center
+           bg-secondary-200 dark:bg-secondary-600
+           text-secondary-500 dark:text-secondary-400;
+  }
+
+  .attachment-preview-info {
+    @apply flex flex-col min-w-0;
+  }
+
+  .attachment-preview-name {
+    @apply text-sm font-medium text-secondary-700 dark:text-secondary-200 truncate max-w-[150px];
+  }
+
+  .attachment-preview-size {
+    @apply text-xs text-secondary-500 dark:text-secondary-400;
+  }
+
+  .attachment-preview-status {
+    @apply flex-shrink-0 text-secondary-400;
+  }
+
+  .attachment-preview-remove {
+    @apply flex-shrink-0 p-1.5 rounded-lg
+           text-secondary-400 hover:text-error-500
+           hover:bg-error-100 dark:hover:bg-error-900/30
+           transition-all duration-200;
+  }
+
+  .attachment-preview-remove:disabled {
+    @apply opacity-50 cursor-not-allowed hover:bg-transparent hover:text-secondary-400;
+  }
+
+  /* ----------------------------------------
+   * DRAG AND DROP OVERLAY
+   * ---------------------------------------- */
+  .message-input-container {
+    @apply relative;
+  }
+
+  .message-input-container.drag-active {
+    @apply border-primary-500 bg-primary-50 dark:bg-primary-900/20;
+  }
+
+  .drag-overlay {
+    @apply absolute inset-0 z-50 rounded-2xl
+           bg-white/95 dark:bg-secondary-800/95
+           border-2 border-dashed border-primary-400
+           flex items-center justify-center
+           backdrop-blur-sm;
+  }
+
+  .drag-overlay-content {
+    @apply flex flex-col items-center gap-3 text-center p-6;
+  }
+
+  /* ----------------------------------------
+   * EMOJI BUTTON
+   * ---------------------------------------- */
   .emoji-btn {
-    @apply p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700
-           text-gray-500 hover:text-gray-700 dark:hover:text-gray-300
+    @apply p-1.5 rounded-lg
+           text-secondary-500 hover:text-secondary-700 dark:hover:text-secondary-300
+           hover:bg-secondary-100 dark:hover:bg-secondary-700
            transition-colors duration-150;
   }
 
-  /* Thread panel */
+  /* ----------------------------------------
+   * THREAD PANEL
+   * ---------------------------------------- */
   .thread-panel {
-    @apply w-96 border-l border-gray-200 dark:border-gray-700
-           bg-white dark:bg-channel-bgDark;
+    @apply w-96 border-l border-secondary-200 dark:border-secondary-700
+           bg-white dark:bg-secondary-900;
   }
 
-  /* Search */
+  /* ----------------------------------------
+   * SEARCH INPUT
+   * ---------------------------------------- */
   .search-input {
-    @apply w-full px-4 py-2 pl-10 rounded-lg
-           bg-gray-100 dark:bg-gray-700
-           text-gray-900 dark:text-gray-100
-           placeholder-gray-500 dark:placeholder-gray-400
-           border-none focus:outline-none focus:ring-2 focus:ring-primary-500;
+    @apply w-full px-4 py-2 pl-10 rounded-lg text-sm
+           bg-secondary-50 dark:bg-secondary-800
+           border border-secondary-200 dark:border-secondary-700
+           text-secondary-900 dark:text-secondary-100
+           placeholder-secondary-400 dark:placeholder-secondary-500
+           focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500
+           transition-colors duration-200;
   }
 
-  /* Typing indicator */
+  /* ----------------------------------------
+   * TYPING INDICATOR
+   * ---------------------------------------- */
   .typing-indicator {
-    @apply flex items-center gap-1 px-5 py-2 text-sm text-gray-500 dark:text-gray-400;
+    @apply flex items-center gap-1 px-5 py-2 text-sm text-secondary-500;
   }
 
   .typing-dot {
-    @apply w-1.5 h-1.5 rounded-full bg-gray-400 animate-typing;
+    @apply w-1.5 h-1.5 rounded-full bg-secondary-400 animate-typing;
   }
 
   .typing-dot:nth-child(2) {
@@ -254,38 +586,326 @@
     animation-delay: 0.4s;
   }
 
-  /* Reaction */
+  /* ----------------------------------------
+   * REACTION
+   * ---------------------------------------- */
   .reaction {
     @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs
-           bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600
+           bg-secondary-100 dark:bg-secondary-700
+           hover:bg-secondary-200 dark:hover:bg-secondary-600
            cursor-pointer transition-colors duration-150;
   }
 
   .reaction.active {
-    @apply bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300;
+    @apply bg-primary-100 dark:bg-primary-900/50
+           text-primary-600 dark:text-primary-400;
   }
 
-  /* Code block */
+  /* ----------------------------------------
+   * CODE BLOCK
+   * ---------------------------------------- */
   .code-block {
-    @apply p-3 rounded-lg bg-gray-800 text-gray-100 font-mono text-sm overflow-x-auto;
+    @apply p-3 rounded-lg bg-secondary-800 text-secondary-100
+           font-mono text-sm overflow-x-auto;
   }
 
-  /* Mention highlight */
+  /* ----------------------------------------
+   * MENTION
+   * ---------------------------------------- */
   .mention {
-    @apply px-1 py-0.5 rounded bg-primary-100 dark:bg-primary-900
-           text-primary-700 dark:text-primary-300 font-medium cursor-pointer
+    @apply px-1 py-0.5 rounded
+           bg-primary-100 dark:bg-primary-900/50
+           text-primary-600 dark:text-primary-400
+           font-medium cursor-pointer
            hover:bg-primary-200 dark:hover:bg-primary-800;
   }
 
-  /* Unread indicator */
+  /* ----------------------------------------
+   * UNREAD BADGE
+   * ---------------------------------------- */
   .unread-badge {
     @apply min-w-[1.25rem] h-5 px-1.5 rounded-full text-xs font-bold
            flex items-center justify-center
-           bg-accent-red text-white;
+           bg-primary-500 text-white;
+  }
+
+  /* ----------------------------------------
+   * TABLE
+   * ---------------------------------------- */
+  .table-container {
+    @apply bg-white dark:bg-secondary-800 rounded-xl
+           border border-secondary-200 dark:border-secondary-700 overflow-hidden;
+  }
+
+  .table-header {
+    @apply bg-secondary-50 dark:bg-secondary-800
+           border-b border-secondary-200 dark:border-secondary-700;
+  }
+
+  .table-header-cell {
+    @apply px-4 py-3 text-left text-xs font-semibold
+           text-secondary-600 dark:text-secondary-400 uppercase tracking-wider;
+  }
+
+  .table-row {
+    @apply border-b border-secondary-100 dark:border-secondary-700
+           hover:bg-secondary-50 dark:hover:bg-secondary-800/50
+           transition-colors;
+  }
+
+  .table-cell {
+    @apply px-4 py-3 text-sm text-secondary-700 dark:text-secondary-300;
+  }
+
+  /* ============================================
+   * JODIT RICH TEXT EDITOR - CHAT STYLING
+   * ============================================ */
+  .jodit-chat-editor {
+    @apply w-full;
+  }
+
+  .jodit-chat-editor .jodit-container {
+    border: none !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+  }
+
+  .jodit-chat-editor .jodit-container:not(.jodit_inline) {
+    border: none !important;
+  }
+
+  .jodit-chat-editor .jodit-workplace {
+    background: transparent !important;
+  }
+
+  .jodit-chat-editor .jodit-wysiwyg {
+    padding: 16px !important;
+    min-height: 80px !important;
+    max-height: 200px !important;
+    background: transparent !important;
+    font-size: 15px !important;
+    line-height: 1.6 !important;
+    color: inherit !important;
+  }
+
+  .jodit-chat-editor .jodit-wysiwyg:focus {
+    outline: none !important;
+  }
+
+  .jodit-chat-editor .jodit-placeholder {
+    padding: 16px !important;
+    font-size: 15px !important;
+    color: #94a3b8 !important;
+  }
+
+  .dark .jodit-chat-editor .jodit-placeholder {
+    color: #64748b !important;
+  }
+
+  /* Toolbar styling */
+  .jodit-chat-editor .jodit-toolbar__box {
+    background: #f8fafc !important;
+    border-bottom: none !important;
+    border-radius: 14px 14px 0 0 !important;
+    padding: 8px 12px !important;
+  }
+
+  .dark .jodit-chat-editor .jodit-toolbar__box {
+    background: #1e293b !important;
+  }
+
+  .jodit-chat-editor .jodit-toolbar-button {
+    border-radius: 8px !important;
+    margin: 2px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+  }
+
+  .jodit-chat-editor .jodit-toolbar-button__button {
+    padding: 7px !important;
+    border-radius: 8px !important;
+  }
+
+  .jodit-chat-editor .jodit-toolbar-button__icon {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  /* Default icon color - make it more visible */
+  .jodit-chat-editor .jodit-toolbar-button__icon svg {
+    fill: #475569 !important;
+    stroke: #475569 !important;
+  }
+
+  .dark .jodit-chat-editor .jodit-toolbar-button__icon svg {
+    fill: #cbd5e1 !important;
+    stroke: #cbd5e1 !important;
+  }
+
+  .jodit-chat-editor .jodit-toolbar-button:hover .jodit-toolbar-button__button {
+    background: #e2e8f0 !important;
+  }
+
+  .dark .jodit-chat-editor .jodit-toolbar-button:hover .jodit-toolbar-button__button {
+    background: #334155 !important;
+  }
+
+  .jodit-chat-editor .jodit-toolbar-button:hover .jodit-toolbar-button__icon svg {
+    fill: #1e293b !important;
+    stroke: #1e293b !important;
+  }
+
+  .dark .jodit-chat-editor .jodit-toolbar-button:hover .jodit-toolbar-button__icon svg {
+    fill: #ffffff !important;
+    stroke: #ffffff !important;
+  }
+
+  .jodit-chat-editor .jodit-toolbar-button[aria-pressed="true"] .jodit-toolbar-button__button {
+    background: rgba(230, 0, 63, 0.15) !important;
+  }
+
+  .jodit-chat-editor .jodit-toolbar-button[aria-pressed="true"] .jodit-toolbar-button__icon svg {
+    fill: #e6003f !important;
+    stroke: #e6003f !important;
+  }
+
+  .jodit-chat-editor .jodit-ui-separator {
+    background: #cbd5e1 !important;
+    margin: 4px 8px !important;
+    height: 24px !important;
+    width: 1px !important;
+  }
+
+  .dark .jodit-chat-editor .jodit-ui-separator {
+    background: #475569 !important;
+  }
+
+  /* Dark mode support for Jodit popups */
+  .dark .jodit-popup,
+  .dark .jodit-dialog {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    border-radius: 12px !important;
+  }
+
+  .dark .jodit-popup__content,
+  .dark .jodit-dialog__content {
+    background: #1e293b !important;
+    color: #f1f5f9 !important;
+  }
+
+  .dark .jodit-input,
+  .dark .jodit-select {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #f1f5f9 !important;
+    border-radius: 8px !important;
+  }
+
+  /* Link dialog styling */
+  .jodit-dialog .jodit-dialog__header {
+    border-radius: 12px 12px 0 0 !important;
+  }
+
+  .jodit-dialog .jodit-dialog__footer {
+    border-radius: 0 0 12px 12px !important;
+  }
+
+  .jodit-ui-button {
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+  }
+
+  /* ============================================
+   * RICH TEXT CONTENT DISPLAY
+   * ============================================ */
+  .rich-text-content {
+    @apply text-secondary-900 dark:text-secondary-100;
+  }
+
+  .rich-text-content b,
+  .rich-text-content strong {
+    @apply font-bold;
+  }
+
+  .rich-text-content i,
+  .rich-text-content em {
+    @apply italic;
+  }
+
+  .rich-text-content u {
+    @apply underline;
+  }
+
+  .rich-text-content s {
+    @apply line-through;
+  }
+
+  .rich-text-content a {
+    @apply text-primary-600 dark:text-primary-400 hover:underline;
+  }
+
+  .rich-text-content code {
+    @apply px-1.5 py-0.5 rounded bg-secondary-100 dark:bg-secondary-800
+           font-mono text-sm text-primary-600 dark:text-primary-400;
+  }
+
+  .rich-text-content pre {
+    @apply p-3 my-2 rounded-lg bg-secondary-800 text-secondary-100
+           font-mono text-sm overflow-x-auto;
+  }
+
+  .rich-text-content pre code {
+    @apply p-0 bg-transparent text-inherit;
+  }
+
+  .rich-text-content ul {
+    @apply list-disc list-inside my-1 pl-2;
+  }
+
+  .rich-text-content ol {
+    @apply list-decimal list-inside my-1 pl-2;
+  }
+
+  .rich-text-content li {
+    @apply my-0.5;
+  }
+
+  .rich-text-content p {
+    @apply my-1 first:mt-0 last:mb-0;
+  }
+
+  /* ============================================
+   * GRADIENT UTILITIES
+   * ============================================ */
+  .gradient-primary {
+    background: linear-gradient(135deg, #ff004e 0%, #e6003f 100%);
+  }
+
+  .gradient-dark {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, #ff004e 0%, #c20035 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ----------------------------------------
+   * TOOLTIP
+   * ---------------------------------------- */
+  .tooltip {
+    @apply absolute z-50 px-2 py-1 text-sm text-white
+           bg-secondary-900 rounded-lg shadow-lg
+           pointer-events-none whitespace-nowrap;
   }
 }
 
-/* Utility styles */
+/* ============================================
+ * UTILITY STYLES
+ * ============================================ */
 @layer utilities {
   /* Hide scrollbar but keep functionality */
   .scrollbar-hide {
@@ -297,10 +917,24 @@
     display: none;
   }
 
-  /* Truncate multiple lines */
+  /* Line clamp utilities */
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }

@@ -44,9 +44,9 @@ const MainLayout: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Title Bar (for custom window controls on macOS) */}
         {window.electronAPI.isMac && (
-          <div className="h-8 bg-channel-bg dark:bg-channel-bgDark drag-region flex items-center pl-20">
+          <div className="h-8 bg-white dark:bg-secondary-900 border-b border-secondary-200 dark:border-secondary-700 drag-region flex items-center pl-20">
             {currentChannel && (
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400 no-drag">
+              <span className="text-sm font-medium text-secondary-600 dark:text-secondary-400 no-drag">
                 # {currentChannel.name}
               </span>
             )}

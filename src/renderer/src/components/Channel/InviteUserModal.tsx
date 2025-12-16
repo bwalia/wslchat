@@ -354,7 +354,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({
           <button
             type="button"
             onClick={handleClose}
-            className="btn-secondary"
+            className="btn-secondary btn-md"
             disabled={isInviting}
           >
             {sentInvites.size > 0 ? "Done" : "Cancel"}
@@ -364,7 +364,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({
               onClick={handleSendInvite}
               disabled={isInviting}
               className={clsx(
-                "btn-primary",
+                "btn-primary btn-md",
                 isInviting && "opacity-75 cursor-not-allowed"
               )}
             >

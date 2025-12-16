@@ -14,16 +14,16 @@ const WelcomeView: React.FC = () => {
           </svg>
         </div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-          Welcome to Convo
+          Welcome to WSL Chat
         </h2>
         <p className="text-gray-500 dark:text-gray-400 mb-6">
           Select a channel from the sidebar to start chatting, or create a new channel to begin a conversation.
         </p>
         <button
           onClick={() => dispatch(openCreateChannel())}
-          className="btn-primary"
+          className="btn-primary btn-md"
         >
-          <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           Create a Channel
