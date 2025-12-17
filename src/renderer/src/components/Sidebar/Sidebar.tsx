@@ -14,6 +14,9 @@ const Sidebar: React.FC = () => {
   const { sidebarCollapsed, isSocketConnected } = useAppSelector((state) => state.ui);
   const { pendingInvites } = useAppSelector((state) => state.invite);
 
+  // Check if running on macOS for traffic light button spacing
+  const isMac = window.electronAPI?.isMac ?? false;
+
   // Fetch pending invites on mount
   useEffect(() => {
     dispatch(fetchPendingInvites());
@@ -45,12 +48,12 @@ const Sidebar: React.FC = () => {
         className={clsx(
           'w-full text-left sidebar-item group',
           isActive && 'active',
-          hasUnread && !isActive && 'font-semibold text-sidebar-textHover'
+          hasUnread && !isActive && 'font-semibold text-white'
         )}
       >
         <span className="mr-2 text-lg">
           {channel.type === 'direct' ? (
-            <span className="inline-block w-2 h-2 rounded-full bg-accent-green mr-1" />
+            <span className="inline-block w-2 h-2 rounded-full bg-success-500 mr-1" />
           ) : channel.type === 'private' ? (
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -71,17 +74,30 @@ const Sidebar: React.FC = () => {
 
   return (
     <div className={clsx('sidebar flex flex-col h-full transition-all duration-200', sidebarCollapsed ? 'w-16' : 'w-64')}>
+      {/* macOS Traffic Light Spacer */}
+      {isMac && (
+        <div className="h-8 drag-region flex-shrink-0" />
+      )}
+
       {/* Workspace Header */}
-      <div className="h-14 flex items-center justify-between px-4 border-b border-sidebar-hover">
+      <div className={clsx(
+        'flex items-center justify-between px-4 border-b border-secondary-700',
+        isMac ? 'h-12 pb-2' : 'h-14'
+      )}>
         {!sidebarCollapsed && (
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-white text-lg">Convo</span>
-            <span className={clsx('w-2 h-2 rounded-full', isSocketConnected ? 'bg-accent-green' : 'bg-gray-500')} />
+          <div className="flex items-center gap-3 no-drag">
+            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-primary">
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </div>
+            <span className="font-bold text-white text-lg">WSL Chat</span>
+            <span className={clsx('w-2 h-2 rounded-full', isSocketConnected ? 'bg-success-500' : 'bg-secondary-500')} />
           </div>
         )}
         <button
           onClick={() => dispatch(toggleSidebar())}
-          className="p-1.5 rounded hover:bg-sidebar-hover text-sidebar-text hover:text-white"
+          className="p-1.5 rounded-lg hover:bg-secondary-800 text-secondary-400 hover:text-white transition-colors no-drag"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -91,17 +107,17 @@ const Sidebar: React.FC = () => {
 
       {/* User Status */}
       {!sidebarCollapsed && (
-        <div className="px-4 py-3 border-b border-sidebar-hover">
+        <div className="px-4 py-3 border-b border-secondary-700">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="avatar-md bg-primary-600 flex items-center justify-center text-white font-medium">
+              <div className="avatar-md gradient-primary flex items-center justify-center text-white font-medium shadow-primary">
                 {user?.name?.charAt(0)?.toUpperCase() || 'U'}
               </div>
               <span className="presence-online" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">{user?.name || 'User'}</p>
-              <p className="text-xs text-sidebar-text truncate">Active</p>
+              <p className="text-xs text-secondary-400 truncate">Active</p>
             </div>
           </div>
         </div>
@@ -109,7 +125,7 @@ const Sidebar: React.FC = () => {
 
       {/* Invitations Button */}
       {!sidebarCollapsed && (
-        <div className="px-2 py-2 border-b border-sidebar-hover">
+        <div className="px-2 py-2 border-b border-secondary-700">
           <button
             onClick={() => dispatch(setInvitesPanelOpen(true))}
             className={clsx(
@@ -127,14 +143,14 @@ const Sidebar: React.FC = () => {
                 />
               </svg>
               {pendingInvites.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-accent-red rounded-full flex items-center justify-center text-[10px] font-bold text-white">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white">
                   {pendingInvites.length > 9 ? '9+' : pendingInvites.length}
                 </span>
               )}
             </div>
             <span className="flex-1 text-left">Invitations</span>
             {pendingInvites.length > 0 && (
-              <span className="text-xs bg-accent-red/20 text-accent-red px-2 py-0.5 rounded-full">
+              <span className="text-xs bg-primary-500/20 text-primary-400 px-2 py-0.5 rounded-full">
                 {pendingInvites.length} new
               </span>
             )}
@@ -149,10 +165,10 @@ const Sidebar: React.FC = () => {
           <>
             <div className="px-4 py-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase text-sidebar-text">Channels</span>
+                <span className="text-xs font-semibold uppercase text-secondary-500 tracking-wider">Channels</span>
                 <button
                   onClick={() => dispatch(openCreateChannel())}
-                  className="p-1 rounded hover:bg-sidebar-hover text-sidebar-text hover:text-white"
+                  className="p-1 rounded-lg hover:bg-secondary-800 text-secondary-400 hover:text-white transition-colors"
                   title="Create channel"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -172,7 +188,7 @@ const Sidebar: React.FC = () => {
 
             {/* Direct Messages Section */}
             <div className="px-4 py-2 mt-4">
-              <span className="text-xs font-semibold uppercase text-sidebar-text">Direct Messages</span>
+              <span className="text-xs font-semibold uppercase text-secondary-500 tracking-wider">Direct Messages</span>
             </div>
             <div className="space-y-0.5 px-2">
               {directMessages.map((channel) => (
@@ -190,10 +206,10 @@ const Sidebar: React.FC = () => {
                 key={channel.uuid}
                 onClick={() => handleChannelClick(channel)}
                 className={clsx(
-                  'w-full p-2 rounded-lg flex items-center justify-center',
+                  'w-full p-2 rounded-lg flex items-center justify-center relative',
                   currentChannel?.uuid === channel.uuid
-                    ? 'bg-sidebar-active text-white'
-                    : 'text-sidebar-text hover:text-white hover:bg-sidebar-hover'
+                    ? 'bg-primary-500/10 text-primary-500'
+                    : 'text-secondary-400 hover:text-white hover:bg-secondary-800'
                 )}
                 title={channel.name}
               >
@@ -201,7 +217,7 @@ const Sidebar: React.FC = () => {
                   {channel.type === 'direct' ? '💬' : '#'}
                 </span>
                 {(channel.unread_count || 0) > 0 && (
-                  <span className="absolute top-0 right-0 w-2 h-2 rounded-full bg-accent-red" />
+                  <span className="absolute top-0 right-0 w-2 h-2 rounded-full bg-primary-500" />
                 )}
               </button>
             ))}
@@ -210,7 +226,7 @@ const Sidebar: React.FC = () => {
       </nav>
 
       {/* Footer Actions */}
-      <div className="border-t border-sidebar-hover p-2">
+      <div className="border-t border-secondary-700 p-2">
         <button
           onClick={() => dispatch(openSettings())}
           className="sidebar-item w-full"
@@ -223,7 +239,7 @@ const Sidebar: React.FC = () => {
         </button>
         <button
           onClick={handleLogout}
-          className="sidebar-item w-full text-accent-red hover:text-red-400"
+          className="sidebar-item w-full text-error-500 hover:text-error-400 hover:bg-error-900/20"
         >
           <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

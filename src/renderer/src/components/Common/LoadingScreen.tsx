@@ -22,7 +22,7 @@ const LoadingScreen: React.FC = () => {
             </svg>
           </div>
         </div>
-        <div className="text-white text-lg font-medium">Loading Convo...</div>
+        <div className="text-white text-lg font-medium">Loading WSL Chat...</div>
         <div className="flex gap-1">
           <div className="w-2 h-2 rounded-full bg-primary-400 animate-bounce" style={{ animationDelay: '0ms' }} />
           <div className="w-2 h-2 rounded-full bg-primary-400 animate-bounce" style={{ animationDelay: '150ms' }} />

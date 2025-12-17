@@ -88,6 +88,9 @@ const validInvokeChannels = [
 
   // Files
   'files:upload',
+  'files:upload-attachment',
+  'files:upload-buffer',
+  'files:select',
   'files:list',
   'files:delete',
 

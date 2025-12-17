@@ -3,7 +3,67 @@
  * Production-ready message management for Convo desktop app
  */
 
-const { createApiClient, handleNetworkError, withRetry } = require('../services/api');
+const { createApiClient, handleNetworkError, withRetry, TIMEOUTS } = require('../services/api');
+const FormData = require('form-data');
+const fs = require('fs');
+const path = require('path');
+const { dialog } = require('electron');
+
+/**
+ * Get MIME type from file extension
+ * @param {string} fileName - File name with extension
+ * @returns {string} MIME type
+ */
+const getMimeType = (fileName) => {
+  const ext = path.extname(fileName).toLowerCase();
+  const mimeTypes = {
+    // Images
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon',
+    '.bmp': 'image/bmp',
+    // Documents
+    '.pdf': 'application/pdf',
+    '.doc': 'application/msword',
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.xls': 'application/vnd.ms-excel',
+    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    '.ppt': 'application/vnd.ms-powerpoint',
+    '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    '.txt': 'text/plain',
+    '.csv': 'text/csv',
+    '.rtf': 'application/rtf',
+    // Archives
+    '.zip': 'application/zip',
+    '.rar': 'application/x-rar-compressed',
+    '.7z': 'application/x-7z-compressed',
+    '.tar': 'application/x-tar',
+    '.gz': 'application/gzip',
+    // Audio
+    '.mp3': 'audio/mpeg',
+    '.wav': 'audio/wav',
+    '.ogg': 'audio/ogg',
+    '.m4a': 'audio/mp4',
+    // Video
+    '.mp4': 'video/mp4',
+    '.webm': 'video/webm',
+    '.avi': 'video/x-msvideo',
+    '.mov': 'video/quicktime',
+    '.mkv': 'video/x-matroska',
+    // Code
+    '.js': 'text/javascript',
+    '.json': 'application/json',
+    '.html': 'text/html',
+    '.css': 'text/css',
+    '.xml': 'application/xml',
+    '.md': 'text/markdown',
+  };
+  return mimeTypes[ext] || 'application/octet-stream';
+};
 
 /**
  * Normalize a message from the API response format to the frontend format
@@ -80,6 +140,9 @@ const register = (ipcMain, store, getSocketService) => {
    * Get messages for channel
    */
   ipcMain.handle('messages:list', async (_, { channelUuid, params = {} }) => {
+    console.log('[Messages] ========== LIST MESSAGES START ==========');
+    console.log('[Messages] Channel UUID:', channelUuid);
+
     const authCheck = validateAuth();
     if (!authCheck.isValid) {
       return { success: false, error: authCheck.error };
@@ -95,6 +158,8 @@ const register = (ipcMain, store, getSocketService) => {
         api.get(`/api/chat/channels/${channelUuid}/messages`, { params })
       );
 
+      console.log('[Messages] List response status:', response.status);
+
       if (response.status >= 400) {
         return {
           success: false,
@@ -104,7 +169,18 @@ const register = (ipcMain, store, getSocketService) => {
 
       // Normalize messages: add user object and reverse for display order
       const rawMessages = response.data?.data || [];
+      console.log('[Messages] Raw messages count:', rawMessages.length);
+
+      // Log attachments for each message
+      rawMessages.forEach((msg, idx) => {
+        if (msg.attachments && msg.attachments.length > 0) {
+          console.log(`[Messages] Message ${idx} (${msg.uuid}) has ${msg.attachments.length} attachments:`, msg.attachments);
+        }
+      });
+
       const normalizedMessages = normalizeMessages(rawMessages);
+
+      console.log('[Messages] ========== LIST MESSAGES END ==========');
 
       return {
         success: true,
@@ -155,24 +231,40 @@ const register = (ipcMain, store, getSocketService) => {
    * Send message
    */
   ipcMain.handle('messages:send', async (_, { channelUuid, messageData }) => {
+    console.log('[Messages] ========== SEND MESSAGE START ==========');
+    console.log('[Messages] Channel UUID:', channelUuid);
+    console.log('[Messages] Message data:', JSON.stringify(messageData, null, 2));
+
     const authCheck = validateAuth();
     if (!authCheck.isValid) {
+      console.log('[Messages] Auth check failed');
       return { success: false, error: authCheck.error };
     }
 
     if (!channelUuid) {
+      console.log('[Messages] No channel UUID');
       return { success: false, error: 'Channel UUID is required' };
     }
 
     if (!messageData?.content && !messageData?.attachments?.length) {
+      console.log('[Messages] No content or attachments');
       return { success: false, error: 'Message content or attachments required' };
     }
 
+    console.log('[Messages] Has attachments:', messageData?.attachments?.length || 0);
+
     try {
       const api = createApiClient(store);
+      console.log('[Messages] Sending POST request to:', `/api/chat/channels/${channelUuid}/messages`);
+      console.log('[Messages] Request body:', JSON.stringify(messageData, null, 2));
+
       const response = await api.post(`/api/chat/channels/${channelUuid}/messages`, messageData);
 
+      console.log('[Messages] Response status:', response.status);
+      console.log('[Messages] Response data:', JSON.stringify(response.data, null, 2));
+
       if (response.status >= 400) {
+        console.log('[Messages] Error response:', response.data);
         return {
           success: false,
           error: response.data?.error || 'Failed to send message',
@@ -181,6 +273,7 @@ const register = (ipcMain, store, getSocketService) => {
 
       // Normalize the message
       const normalizedMessage = normalizeMessage(response.data);
+      console.log('[Messages] Normalized message attachments:', normalizedMessage.attachments);
 
       // Emit via socket for real-time delivery to other clients
       const socketService = getSocketService();
@@ -191,6 +284,7 @@ const register = (ipcMain, store, getSocketService) => {
         });
       }
 
+      console.log('[Messages] ========== SEND MESSAGE END ==========');
       console.log('[Messages] Sent to:', channelUuid);
       return { success: true, data: normalizedMessage };
     } catch (error) {
@@ -969,7 +1063,226 @@ const register = (ipcMain, store, getSocketService) => {
   // ============ Files ============
 
   /**
-   * Upload file (creates record)
+   * Upload file attachment to MinIO via documents API
+   * Uses multipart form data for binary file upload
+   */
+  ipcMain.handle('files:upload-attachment', async (_, { filePath, channelUuid }) => {
+    console.log('[Files] ========== UPLOAD ATTACHMENT START ==========');
+    console.log('[Files] Input:', { filePath, channelUuid });
+
+    const authCheck = validateAuth();
+    if (!authCheck.isValid) {
+      console.log('[Files] Auth check failed:', authCheck.error);
+      return { success: false, error: authCheck.error };
+    }
+    console.log('[Files] Auth check passed');
+
+    if (!filePath) {
+      console.log('[Files] No file path provided');
+      return { success: false, error: 'File path is required' };
+    }
+
+    if (!channelUuid) {
+      console.log('[Files] No channel UUID provided');
+      return { success: false, error: 'Channel UUID is required' };
+    }
+
+    try {
+      // Check if file exists
+      console.log('[Files] Checking if file exists:', filePath);
+      if (!fs.existsSync(filePath)) {
+        console.log('[Files] File not found:', filePath);
+        return { success: false, error: 'File not found' };
+      }
+      console.log('[Files] File exists');
+
+      // Get file stats
+      const stats = fs.statSync(filePath);
+      const maxSize = 50 * 1024 * 1024; // 50MB limit
+
+      console.log('[Files] File stats:', { size: stats.size, path: filePath });
+
+      if (stats.size > maxSize) {
+        return { success: false, error: 'File size exceeds 50MB limit' };
+      }
+
+      // Read file as buffer for more reliable upload
+      const fileName = path.basename(filePath);
+      const fileBuffer = fs.readFileSync(filePath);
+      console.log('[Files] File read into buffer, size:', fileBuffer.length);
+
+      // Create form data with buffer instead of stream
+      const formData = new FormData();
+      formData.append('file', fileBuffer, {
+        filename: fileName,
+        contentType: getMimeType(fileName),
+        knownLength: fileBuffer.length,
+      });
+      formData.append('prefix', `chat-attachments/${channelUuid}`);
+
+      // Get auth headers
+      const auth = store.get('auth');
+      const config = require('../config');
+
+      const headers = {
+        ...formData.getHeaders(),
+        'Authorization': `Bearer ${auth.token}`,
+        'X-User-Id': auth.user?.uuid || '',
+        'X-Business-Id': auth.user?.uuid_business_id || '',
+      };
+
+      // Upload to documents API
+      const axios = require('axios');
+      const uploadUrl = `${config.documentsApiUrl}/api/v2/documents/upload`;
+
+      console.log('[Files] Uploading to:', uploadUrl);
+      console.log('[Files] File name:', fileName);
+      console.log('[Files] Content type:', getMimeType(fileName));
+
+      const response = await axios.post(uploadUrl, formData, {
+        headers,
+        timeout: TIMEOUTS.upload,
+        maxContentLength: maxSize,
+        maxBodyLength: maxSize,
+        validateStatus: () => true, // Accept all status codes to handle errors
+      });
+
+      console.log('[Files] Upload response status:', response.status);
+      console.log('[Files] Upload response data:', JSON.stringify(response.data, null, 2));
+
+      if (response.status >= 400) {
+        const errorMsg = response.data?.error || response.data?.json?.error || 'Failed to upload file';
+        console.error('[Files] Upload failed with status:', response.status, errorMsg);
+        return {
+          success: false,
+          error: errorMsg,
+        };
+      }
+
+      // Extract attachment data from response - handle nested structure
+      const responseData = response.data;
+      const uploadData = responseData?.data || responseData?.json?.data || responseData;
+
+      console.log('[Files] Parsed upload data:', uploadData);
+
+      if (!uploadData?.url) {
+        console.error('[Files] No URL in response:', responseData);
+        return {
+          success: false,
+          error: 'Upload succeeded but no URL returned',
+        };
+      }
+
+      console.log('[Files] Uploaded attachment successfully:', fileName);
+      console.log('[Files] File URL:', uploadData.url);
+      console.log('[Files] ========== UPLOAD ATTACHMENT END ==========');
+
+      return {
+        success: true,
+        data: {
+          file_name: uploadData.filename || fileName,
+          file_type: uploadData.content_type || getMimeType(fileName),
+          file_size: uploadData.size || stats.size,
+          file_url: uploadData.url,
+          key: uploadData.key,
+        },
+      };
+    } catch (error) {
+      console.error('[Files] ========== UPLOAD ERROR ==========');
+      console.error('[Files] Error message:', error.message);
+      console.error('[Files] Error code:', error.code);
+      console.error('[Files] Error response:', error.response?.data);
+      console.error('[Files] Full error:', error);
+      return handleNetworkError(error, 'Failed to upload file');
+    }
+  });
+
+  /**
+   * Upload file from buffer (for drag and drop / paste)
+   */
+  ipcMain.handle('files:upload-buffer', async (_, { buffer, fileName, channelUuid }) => {
+    const authCheck = validateAuth();
+    if (!authCheck.isValid) {
+      return { success: false, error: authCheck.error };
+    }
+
+    if (!buffer || !fileName) {
+      return { success: false, error: 'Buffer and file name are required' };
+    }
+
+    if (!channelUuid) {
+      return { success: false, error: 'Channel UUID is required' };
+    }
+
+    try {
+      const maxSize = 50 * 1024 * 1024; // 50MB limit
+      const bufferData = Buffer.from(buffer);
+
+      if (bufferData.length > maxSize) {
+        return { success: false, error: 'File size exceeds 50MB limit' };
+      }
+
+      // Create form data with buffer
+      const formData = new FormData();
+      formData.append('file', bufferData, {
+        filename: fileName,
+        contentType: getMimeType(fileName),
+      });
+      formData.append('prefix', `chat-attachments/${channelUuid}`);
+
+      // Get auth headers
+      const auth = store.get('auth');
+      const headers = {
+        ...formData.getHeaders(),
+        Authorization: `Bearer ${auth.token}`,
+        'X-User-Id': auth.user?.uuid,
+        'X-Business-Id': auth.user?.uuid_business_id,
+      };
+
+      // Upload to documents API (separate service on port 4010)
+      const axios = require('axios');
+      const config = require('../config');
+
+      const response = await axios.post(
+        `${config.documentsApiUrl}/api/v2/documents/upload`,
+        formData,
+        {
+          headers,
+          timeout: TIMEOUTS.upload,
+          maxContentLength: maxSize,
+          maxBodyLength: maxSize,
+        }
+      );
+
+      if (response.status >= 400) {
+        return {
+          success: false,
+          error: response.data?.error || 'Failed to upload file',
+        };
+      }
+
+      const uploadData = response.data?.data || response.data;
+
+      console.log('[Files] Uploaded buffer attachment:', fileName);
+
+      return {
+        success: true,
+        data: {
+          file_name: uploadData.filename || fileName,
+          file_type: uploadData.content_type || getMimeType(fileName),
+          file_size: uploadData.size || bufferData.length,
+          file_url: uploadData.url,
+          key: uploadData.key,
+        },
+      };
+    } catch (error) {
+      console.error('[Files] Upload buffer error:', error.message);
+      return handleNetworkError(error, 'Failed to upload file');
+    }
+  });
+
+  /**
+   * Upload file (creates record) - Legacy handler
    */
   ipcMain.handle('files:upload', async (_, fileData) => {
     const authCheck = validateAuth();
@@ -1027,6 +1340,59 @@ const register = (ipcMain, store, getSocketService) => {
     } catch (error) {
       console.error('[Files] List error:', error.message);
       return handleNetworkError(error, 'Failed to list files');
+    }
+  });
+
+  /**
+   * Open file picker dialog
+   */
+  ipcMain.handle('files:select', async (_, options = {}) => {
+    console.log('[Files] ========== FILE SELECT START ==========');
+    console.log('[Files] Select options:', options);
+    const { multiple = true, filters } = options;
+
+    try {
+      const defaultFilters = [
+        { name: 'All Files', extensions: ['*'] },
+        { name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'] },
+        { name: 'Documents', extensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv'] },
+        { name: 'Archives', extensions: ['zip', 'rar', '7z', 'tar', 'gz'] },
+      ];
+
+      console.log('[Files] Opening file dialog...');
+      const result = await dialog.showOpenDialog({
+        properties: multiple ? ['openFile', 'multiSelections'] : ['openFile'],
+        filters: filters || defaultFilters,
+      });
+
+      console.log('[Files] Dialog result:', { canceled: result.canceled, filePaths: result.filePaths });
+
+      if (result.canceled || !result.filePaths.length) {
+        console.log('[Files] Dialog canceled or no files selected');
+        return { success: true, data: { files: [] } };
+      }
+
+      // Get file info for each selected file
+      const files = result.filePaths.map((filePath) => {
+        const stats = fs.statSync(filePath);
+        const fileName = path.basename(filePath);
+        const fileInfo = {
+          path: filePath,
+          name: fileName,
+          size: stats.size,
+          type: getMimeType(fileName),
+        };
+        console.log('[Files] File info:', fileInfo);
+        return fileInfo;
+      });
+
+      console.log('[Files] Returning files:', files.length);
+      console.log('[Files] ========== FILE SELECT END ==========');
+      return { success: true, data: { files } };
+    } catch (error) {
+      console.error('[Files] Select error:', error.message);
+      console.error('[Files] Select full error:', error);
+      return { success: false, error: 'Failed to open file picker' };
     }
   });
 

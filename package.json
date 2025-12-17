@@ -1,5 +1,5 @@
 {
-  "name": "convo",
+  "name": "wsl-chat",
   "version": "1.0.0",
   "description": "Professional Slack-like desktop chat application",
   "main": "src/main/index.js",
@@ -18,7 +18,7 @@
     "dist:linux": "electron-builder --linux",
     "postinstall": "cd src/renderer && npm install"
   },
-  "author": "Convo Team",
+  "author": "WSL Chat Team",
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2",
@@ -30,12 +30,13 @@
     "dotenv": "^16.3.1",
     "electron": "^33.4.11",
     "electron-store": "^8.1.0",
+    "form-data": "^4.0.5",
     "socket.io-client": "^4.7.2"
   },
   "build": {
-    "appId": "com.convo.chat",
-    "productName": "Convo",
-    "copyright": "Copyright © 2024 Convo Team",
+    "appId": "com.wslchat.app",
+    "productName": "WSL Chat",
+    "copyright": "Copyright © 2024 WSL Chat Team",
     "directories": {
       "output": "dist",
       "buildResources": "build"

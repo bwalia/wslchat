@@ -222,7 +222,7 @@ const SettingsModal: React.FC = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Convo</h3>
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white">WSL Chat</h3>
                   <p className="text-gray-500 dark:text-gray-400 mt-2">Version 1.0.0</p>
                   <p className="text-sm text-gray-400 dark:text-gray-500 mt-4">
                     Professional team chat application
