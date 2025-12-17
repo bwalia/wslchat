@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "../../hooks/useAppDispatch";
 import { sendMessage } from "../../store/slices/messageSlice";
 import { useTypingIndicator } from "../../hooks/useSocketEvents";
@@ -6,6 +6,8 @@ import JoditEditor from "jodit-react";
 import type { IJodit } from "jodit/esm/types/jodit";
 import clsx from "clsx";
 import AttachmentPreview, { type PendingAttachment } from "./AttachmentPreview";
+import MentionAutocomplete from "./MentionAutocomplete";
+import type { MentionableUser, SpecialMention } from "../../types";
 
 interface MessageInputProps {
   channelUuid: string;
@@ -156,6 +158,14 @@ const createEditorConfig = (
   },
 });
 
+// Interface for mention state
+interface MentionState {
+  isVisible: boolean;
+  searchTerm: string;
+  position: { top: number; left: number };
+  triggerIndex: number; // Position of @ in the text
+}
+
 const MessageInput: React.FC<MessageInputProps> = ({
   channelUuid,
   parentMessageUuid,
@@ -166,11 +176,20 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const { currentChannel } = useAppSelector((state) => state.channel);
   const editorRef = useRef<IJodit | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const [content, setContent] = useState("");
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const sendTyping = useTypingIndicator(channelUuid);
+
+  // Mention autocomplete state
+  const [mentionState, setMentionState] = useState<MentionState>({
+    isVisible: false,
+    searchTerm: "",
+    position: { top: 0, left: 0 },
+    triggerIndex: -1,
+  });
 
   const channelName = currentChannel?.name || "channel";
   const defaultPlaceholder = parentMessageUuid
@@ -190,30 +209,86 @@ const MessageInput: React.FC<MessageInputProps> = ({
     []
   );
 
-  // Upload attachments to server
-  const uploadAttachments = useCallback(
-    async (attachmentsToUpload: PendingAttachment[]) => {
-      console.log(
-        "[MessageInput] uploadAttachments called with:",
-        attachmentsToUpload.length,
-        "files"
+  // Type definitions for upload responses
+  interface UploadedFileData {
+    file_name: string;
+    file_type: string;
+    file_size: number;
+    file_url: string;
+    key?: string;
+  }
+
+  interface UploadSuccessResult {
+    success: true;
+    data: UploadedFileData;
+    error?: undefined;
+  }
+
+  interface UploadErrorResult {
+    success: false;
+    error: string;
+    data?: undefined;
+  }
+
+  type UploadResult = UploadSuccessResult | UploadErrorResult;
+
+  // Upload a single attachment (path-based for native file selection)
+  const uploadAttachmentByPath = useCallback(
+    async (attachment: PendingAttachment): Promise<UploadResult> => {
+      const result = await window.electronAPI.invoke<UploadedFileData>(
+        "files:upload-attachment",
+        {
+          filePath: attachment.path,
+          channelUuid,
+        }
       );
 
+      if (result.success && result.data) {
+        return { success: true, data: result.data };
+      }
+      return { success: false, error: result.error || "Upload failed" };
+    },
+    [channelUuid]
+  );
+
+  // Upload a single attachment (buffer-based for drag & drop)
+  const uploadAttachmentByBuffer = useCallback(
+    async (attachment: PendingAttachment): Promise<UploadResult> => {
+      if (!attachment.file) {
+        return { success: false, error: "No file data available" };
+      }
+
+      // Read file as ArrayBuffer
+      const arrayBuffer = await attachment.file.arrayBuffer();
+      const buffer = Array.from(new Uint8Array(arrayBuffer));
+
+      const result = await window.electronAPI.invoke<UploadedFileData>(
+        "files:upload-buffer",
+        {
+          buffer,
+          fileName: attachment.name,
+          channelUuid,
+        }
+      );
+
+      if (result.success && result.data) {
+        return { success: true, data: result.data };
+      }
+      return { success: false, error: result.error || "Upload failed" };
+    },
+    [channelUuid]
+  );
+
+  // Upload attachments to server
+  const uploadAttachments = useCallback(
+    async (attachmentsToUpload: PendingAttachment[]): Promise<void> => {
       if (!attachmentsToUpload.length) {
-        console.log("[MessageInput] No attachments to upload");
         return;
       }
 
       setIsUploading(true);
 
       for (const attachment of attachmentsToUpload) {
-        console.log(
-          "[MessageInput] Uploading:",
-          attachment.name,
-          "path:",
-          attachment.path
-        );
-
         // Mark as uploading
         setAttachments((prev) =>
           prev.map((a) =>
@@ -222,29 +297,19 @@ const MessageInput: React.FC<MessageInputProps> = ({
         );
 
         try {
-          console.log(
-            "[MessageInput] Calling files:upload-attachment IPC with:",
-            {
-              filePath: attachment.path,
-              channelUuid,
-            }
-          );
+          let result: UploadResult;
 
-          const result = await window.electronAPI.invoke<{
-            file_name: string;
-            file_type: string;
-            file_size: number;
-            file_url: string;
-            key?: string;
-          }>("files:upload-attachment", {
-            filePath: attachment.path,
-            channelUuid,
-          });
+          // Use path-based upload if path is available (native file dialog)
+          // Otherwise use buffer-based upload (drag & drop in sandbox mode)
+          if (attachment.path) {
+            result = await uploadAttachmentByPath(attachment);
+          } else if (attachment.file) {
+            result = await uploadAttachmentByBuffer(attachment);
+          } else {
+            result = { success: false, error: "No file path or data available" };
+          }
 
-          console.log("[MessageInput] Upload result:", result);
-
-          if (result.success && result.data) {
-            console.log("[MessageInput] Upload successful:", result.data);
+          if (result.success) {
             setAttachments((prev) =>
               prev.map((a) =>
                 a.id === attachment.id
@@ -258,28 +323,28 @@ const MessageInput: React.FC<MessageInputProps> = ({
               )
             );
           } else {
-            console.error("[MessageInput] Upload failed:", result.error);
             setAttachments((prev) =>
               prev.map((a) =>
                 a.id === attachment.id
                   ? {
                       ...a,
                       uploading: false,
-                      error: result.error || "Upload failed",
+                      error: result.error,
                     }
                   : a
               )
             );
           }
-        } catch (error: any) {
-          console.error("[MessageInput] Upload catch error:", error);
+        } catch (err) {
+          const errorMessage =
+            err instanceof Error ? err.message : "Upload failed";
           setAttachments((prev) =>
             prev.map((a) =>
               a.id === attachment.id
                 ? {
                     ...a,
                     uploading: false,
-                    error: error.message || "Upload failed",
+                    error: errorMessage,
                   }
                 : a
             )
@@ -288,9 +353,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
       }
 
       setIsUploading(false);
-      console.log("[MessageInput] Upload process completed");
     },
-    [channelUuid]
+    [uploadAttachmentByPath, uploadAttachmentByBuffer]
   );
 
   // Handle file selection via native dialog
@@ -424,16 +488,21 @@ const MessageInput: React.FC<MessageInputProps> = ({
       const files = e.dataTransfer.files;
       if (!files?.length) return;
 
+      console.log("[MessageInput] Drop detected, files:", files.length);
+
       const newAttachments: PendingAttachment[] = [];
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        // Get the file path from the File object (Electron provides this)
+        // Get the file path from the File object (Electron provides this in non-sandbox mode)
         const filePath = (file as any).path;
+
+        console.log("[MessageInput] Processing dropped file:", file.name, "path:", filePath);
 
         const attachment: PendingAttachment = {
           id: generateId(),
-          path: filePath,
+          path: filePath, // May be undefined in sandbox mode
+          file: file, // Store File object for buffer-based upload
           name: file.name,
           size: file.size,
           type: file.type || "application/octet-stream",
@@ -453,10 +522,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
       setAttachments((prev) => [...prev, ...newAttachments]);
 
-      // Upload attachments that have file paths
-      const uploadableAttachments = newAttachments.filter((a) => a.path);
-      if (uploadableAttachments.length > 0) {
-        uploadAttachments(uploadableAttachments);
+      // Upload all attachments (uploadAttachments handles path vs buffer upload)
+      if (newAttachments.length > 0) {
+        console.log("[MessageInput] Starting upload for", newAttachments.length, "dropped files");
+        uploadAttachments(newAttachments);
       }
     },
     [generateId, uploadAttachments]
@@ -468,18 +537,273 @@ const MessageInput: React.FC<MessageInputProps> = ({
     [isSending, placeholder, defaultPlaceholder]
   );
 
+  // Get cursor position in pixels for positioning autocomplete
+  const getCursorPosition = useCallback((): { top: number; left: number } => {
+    const editor = editorRef.current;
+    if (!editor || !editor.selection) {
+      return { top: 0, left: 0 };
+    }
+
+    try {
+      const selection = editor.selection.sel;
+      if (!selection || selection.rangeCount === 0) {
+        return { top: 0, left: 0 };
+      }
+
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      const containerRect = containerRef.current?.getBoundingClientRect();
+
+      if (containerRect) {
+        return {
+          top: containerRect.bottom - rect.bottom + 24,
+          left: rect.left - containerRect.left,
+        };
+      }
+
+      return { top: 0, left: rect.left };
+    } catch {
+      return { top: 0, left: 0 };
+    }
+  }, []);
+
+  // Check for @ mention trigger in content
+  const checkForMentionTrigger = useCallback(
+    () => {
+      const editor = editorRef.current;
+
+      if (!editor || !editor.selection) {
+        return;
+      }
+
+      try {
+        const selection = editor.selection.sel;
+        if (!selection || selection.rangeCount === 0) {
+          return;
+        }
+
+        // Get current cursor position in text
+        const range = selection.getRangeAt(0);
+        const container = range.startContainer;
+        const offset = range.startOffset;
+
+        // Get text before cursor
+        let textBeforeCursor = "";
+        if (container.nodeType === Node.TEXT_NODE) {
+          textBeforeCursor = container.textContent?.substring(0, offset) || "";
+        }
+
+        // Find the last @ symbol before cursor
+        const lastAtIndex = textBeforeCursor.lastIndexOf("@");
+
+        if (lastAtIndex !== -1) {
+          // Check if @ is at start of word (preceded by space, newline, or at start)
+          const charBefore = textBeforeCursor[lastAtIndex - 1];
+          const isStartOfWord =
+            lastAtIndex === 0 ||
+            charBefore === " " ||
+            charBefore === "\n" ||
+            charBefore === "\t";
+
+          if (isStartOfWord) {
+            // Get the search term after @
+            const searchTerm = textBeforeCursor.substring(lastAtIndex + 1);
+
+            // Only show autocomplete if search term has no spaces
+            if (!searchTerm.includes(" ")) {
+              const position = getCursorPosition();
+              setMentionState({
+                isVisible: true,
+                searchTerm,
+                position,
+                triggerIndex: lastAtIndex,
+              });
+              return;
+            }
+          }
+        }
+
+        // Hide autocomplete if no valid @ trigger found
+        if (mentionState.isVisible) {
+          setMentionState((prev) => ({ ...prev, isVisible: false }));
+        }
+      } catch (error) {
+        console.error("[MessageInput] Error checking mention trigger:", error);
+      }
+    },
+    [getCursorPosition, mentionState.isVisible]
+  );
+
+  // Handle mention selection from autocomplete
+  const handleMentionSelect = useCallback(
+    (mention: MentionableUser | SpecialMention) => {
+      const editor = editorRef.current;
+      if (!editor) {
+        setMentionState((prev) => ({ ...prev, isVisible: false }));
+        return;
+      }
+
+      try {
+        // Determine the display text and data attributes
+        const isSpecial = "display" in mention;
+        const displayText = isSpecial
+          ? mention.display
+          : `@${mention.display_name || mention.username || "user"}`;
+        const mentionId = isSpecial ? mention.id : mention.uuid;
+        const mentionType = isSpecial ? mention.id : "user";
+
+        // Get current selection
+        const selection = editor.selection.sel;
+        if (!selection || selection.rangeCount === 0) {
+          setMentionState((prev) => ({ ...prev, isVisible: false }));
+          return;
+        }
+
+        const range = selection.getRangeAt(0);
+        const container = range.startContainer;
+        const offset = range.startOffset;
+
+        if (container.nodeType === Node.TEXT_NODE && container.textContent) {
+          const text = container.textContent;
+          const beforeAt = text.substring(0, offset);
+          const lastAtIndex = beforeAt.lastIndexOf("@");
+
+          if (lastAtIndex !== -1) {
+            // Calculate text before @ and after cursor
+            const textBefore = text.substring(0, lastAtIndex);
+            const textAfter = text.substring(offset);
+
+            // Create mention span element
+            const mentionSpan = editor.createInside.element("span", {
+              class: "mention-tag",
+              "data-mention-id": mentionId,
+              "data-mention-type": mentionType,
+              contenteditable: "false",
+            });
+            mentionSpan.textContent = displayText;
+
+            // Create space after mention
+            const spaceNode = editor.createInside.text("\u00A0");
+
+            // Replace the text node content
+            const parentNode = container.parentNode;
+            if (parentNode) {
+              // Create new structure
+              const fragment = document.createDocumentFragment();
+
+              if (textBefore) {
+                fragment.appendChild(document.createTextNode(textBefore));
+              }
+              fragment.appendChild(mentionSpan);
+              fragment.appendChild(spaceNode);
+              if (textAfter) {
+                fragment.appendChild(document.createTextNode(textAfter));
+              }
+
+              // Replace the text node
+              parentNode.replaceChild(fragment, container);
+
+              // Move cursor after the space
+              const newRange = document.createRange();
+              newRange.setStartAfter(spaceNode);
+              newRange.collapse(true);
+              selection.removeAllRanges();
+              selection.addRange(newRange);
+
+              // Update content state
+              setContent(editor.value);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("[MessageInput] Error inserting mention:", error);
+      }
+
+      // Close autocomplete
+      setMentionState((prev) => ({ ...prev, isVisible: false }));
+    },
+    []
+  );
+
+  // Close mention autocomplete
+  const handleMentionClose = useCallback(() => {
+    setMentionState((prev) => ({ ...prev, isVisible: false }));
+  }, []);
+
+  // Handle @ button click to open mention autocomplete
+  const handleMentionButtonClick = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    try {
+      // Insert @ at cursor position
+      editor.selection.insertHTML("@");
+      editor.selection.focus();
+
+      // Trigger mention detection
+      const position = getCursorPosition();
+      setMentionState({
+        isVisible: true,
+        searchTerm: "",
+        position,
+        triggerIndex: -1,
+      });
+    } catch (error) {
+      console.error("[MessageInput] Error opening mention:", error);
+    }
+  }, [getCursorPosition]);
+
   // Handle content changes with error boundary
   const handleChange = useCallback(
     (newContent: string) => {
       try {
         setContent(newContent || "");
         sendTyping(true);
+
+        // Check for mention trigger
+        checkForMentionTrigger();
       } catch (error) {
         console.error("[MessageInput] Error handling content change:", error);
       }
     },
-    [sendTyping]
+    [sendTyping, checkForMentionTrigger]
   );
+
+  // Set up keyboard event listener for editor
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    const handleEditorKeyUp = () => {
+      // Re-check mention trigger on key up
+      checkForMentionTrigger();
+    };
+
+    // Add event listener to editor
+    editor.events?.on("keyup", handleEditorKeyUp);
+
+    return () => {
+      editor.events?.off("keyup", handleEditorKeyUp);
+    };
+  }, [checkForMentionTrigger]);
+
+  // Extract mentions from HTML content
+  const extractMentions = useCallback((html: string): Array<{ uuid: string; type: string }> => {
+    const mentions: Array<{ uuid: string; type: string }> = [];
+    const mentionRegex = /<span[^>]*data-mention-id="([^"]*)"[^>]*data-mention-type="([^"]*)"[^>]*>/g;
+
+    let match;
+    while ((match = mentionRegex.exec(html)) !== null) {
+      const uuid = match[1];
+      const type = match[2];
+      // Avoid duplicates
+      if (!mentions.some(m => m.uuid === uuid && m.type === type)) {
+        mentions.push({ uuid, type });
+      }
+    }
+
+    return mentions;
+  }, []);
 
   // Handle message submission with proper error handling
   const handleSubmit = useCallback(async () => {
@@ -499,9 +823,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
       sendTyping(false);
 
-      // Determine content type based on HTML presence
+      // Extract mentions from content
+      const mentions = extractMentions(content);
+
+      // Determine content type based on HTML presence (including mentions)
       const hasHtmlFormatting =
-        /<(b|i|u|s|strong|em|a|ul|ol|li|code|pre)[^>]*>/i.test(content);
+        /<(b|i|u|s|strong|em|a|ul|ol|li|code|pre|span)[^>]*>/i.test(content);
       const contentType = hasHtmlFormatting ? "markdown" : "text";
       const messageContent = hasHtmlFormatting
         ? sanitizeHtml(content)
@@ -523,6 +850,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           parentMessageUuid,
           attachments:
             messageAttachments.length > 0 ? messageAttachments : undefined,
+          mentions: mentions.length > 0 ? mentions : undefined,
         })
       );
 
@@ -546,6 +874,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
     dispatch,
     channelUuid,
     parentMessageUuid,
+    extractMentions,
   ]);
 
   // Handle keyboard events with error boundary
@@ -565,6 +894,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   return (
     <div
+      ref={containerRef}
       className={clsx("message-input-container", isDragging && "drag-active")}
       onKeyDown={handleKeyDown}
       onDragEnter={handleDragEnter}
@@ -615,6 +945,16 @@ const MessageInput: React.FC<MessageInputProps> = ({
           onChange={handleChange}
         />
       </div>
+
+      {/* Mention Autocomplete */}
+      <MentionAutocomplete
+        channelUuid={channelUuid}
+        searchTerm={mentionState.searchTerm}
+        position={mentionState.position}
+        onSelect={handleMentionSelect}
+        onClose={handleMentionClose}
+        isVisible={mentionState.isVisible}
+      />
 
       {/* Hidden file input for fallback */}
       <input
@@ -675,8 +1015,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
           {/* Mention */}
           <button
             className="message-input-action-btn"
-            title="Mention someone"
+            title="Mention someone (@)"
             type="button"
+            onClick={handleMentionButtonClick}
           >
             <svg
               className="w-5 h-5"

@@ -620,6 +620,101 @@
            hover:bg-primary-200 dark:hover:bg-primary-800;
   }
 
+  /* Mention Autocomplete */
+  .mention-autocomplete {
+    @apply w-72 max-h-64 overflow-hidden;
+  }
+
+  .mention-autocomplete-container {
+    @apply bg-white dark:bg-secondary-800 rounded-lg shadow-xl
+           border border-secondary-200 dark:border-secondary-700
+           overflow-hidden;
+  }
+
+  .mention-autocomplete-loading,
+  .mention-autocomplete-empty {
+    @apply px-4 py-3 text-center;
+  }
+
+  .mention-autocomplete-list {
+    @apply max-h-60 overflow-y-auto py-1;
+  }
+
+  .mention-autocomplete-item {
+    @apply px-3 py-2 cursor-pointer
+           hover:bg-secondary-100 dark:hover:bg-secondary-700
+           transition-colors;
+  }
+
+  .mention-autocomplete-item.selected {
+    @apply bg-primary-50 dark:bg-primary-900/30;
+  }
+
+  .mention-special {
+    @apply flex items-center gap-3;
+  }
+
+  .mention-special-icon {
+    @apply w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-800
+           flex items-center justify-center;
+  }
+
+  .mention-special-info {
+    @apply flex flex-col;
+  }
+
+  .mention-special-name {
+    @apply text-sm font-semibold text-secondary-900 dark:text-secondary-100;
+  }
+
+  .mention-special-description {
+    @apply text-xs text-secondary-500 dark:text-secondary-400;
+  }
+
+  .mention-user {
+    @apply flex items-center gap-3;
+  }
+
+  .mention-user-avatar {
+    @apply relative;
+  }
+
+  .mention-user-status {
+    @apply absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full
+           border-2 border-white dark:border-secondary-800;
+  }
+
+  .mention-user-info {
+    @apply flex flex-col;
+  }
+
+  .mention-user-name {
+    @apply text-sm font-medium text-secondary-900 dark:text-secondary-100;
+  }
+
+  .mention-user-username {
+    @apply text-xs text-secondary-500 dark:text-secondary-400;
+  }
+
+  /* Mention Tag (inserted in editor) */
+  .mention-tag {
+    @apply inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded
+           bg-primary-100 dark:bg-primary-900/40
+           text-primary-700 dark:text-primary-300
+           font-medium text-sm
+           cursor-default select-none;
+  }
+
+  .mention-tag:hover {
+    @apply bg-primary-200 dark:bg-primary-800/60;
+  }
+
+  /* Mention tag in message content (rendered) */
+  .message-content .mention-tag {
+    @apply bg-primary-100/80 dark:bg-primary-900/30
+           text-primary-600 dark:text-primary-400;
+  }
+
   /* ----------------------------------------
    * UNREAD BADGE
    * ---------------------------------------- */

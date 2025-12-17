@@ -139,12 +139,42 @@ export interface Draft {
 // Mention
 export interface Mention {
   uuid: string;
-  user_uuid: string;
+  mention_uuid?: string;
   message_uuid: string;
   channel_uuid: string;
+  mentioned_by_uuid: string;
+  mention_type: "user" | "channel" | "everyone" | "here";
   is_read: boolean;
-  message?: Message;
   created_at: string;
+  // Joined data from API
+  message_content?: string;
+  message_content_type?: string;
+  channel_name?: string;
+  channel_type?: string;
+  mentioned_by_first_name?: string;
+  mentioned_by_last_name?: string;
+  mentioned_by_username?: string;
+  mentioned_by_email?: string;
+  // Nested objects
+  message?: Message;
+}
+
+// Mentionable user for autocomplete
+export interface MentionableUser {
+  uuid: string;
+  username?: string;
+  display_name: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  status?: PresenceStatus;
+}
+
+// Special mention types
+export interface SpecialMention {
+  id: string;
+  display: string;
+  description: string;
 }
 
 // Channel Invite

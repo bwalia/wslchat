@@ -5,6 +5,7 @@ import messageReducer from './slices/messageSlice';
 import uiReducer from './slices/uiSlice';
 import presenceReducer from './slices/presenceSlice';
 import inviteReducer from './slices/inviteSlice';
+import mentionReducer from './slices/mentionSlice';
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     ui: uiReducer,
     presence: presenceReducer,
     invite: inviteReducer,
+    mention: mentionReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
