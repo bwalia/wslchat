@@ -944,122 +944,6 @@ const register = (ipcMain, store, getSocketService) => {
     }
   });
 
-  // ============ Mentions ============
-
-  /**
-   * List mentions
-   */
-  ipcMain.handle('mentions:list', async (_, params = {}) => {
-    const authCheck = validateAuth();
-    if (!authCheck.isValid) {
-      return { success: false, error: authCheck.error };
-    }
-
-    try {
-      const api = createApiClient(store);
-      const response = await api.get('/api/chat/mentions', { params });
-
-      if (response.status >= 400) {
-        return {
-          success: false,
-          error: response.data?.error || 'Failed to list mentions',
-        };
-      }
-
-      return { success: true, data: response.data };
-    } catch (error) {
-      console.error('[Mentions] List error:', error.message);
-      return handleNetworkError(error, 'Failed to list mentions');
-    }
-  });
-
-  /**
-   * Mark mention as read
-   */
-  ipcMain.handle('mentions:mark-read', async (_, mentionUuid) => {
-    const authCheck = validateAuth();
-    if (!authCheck.isValid) {
-      return { success: false, error: authCheck.error };
-    }
-
-    if (!mentionUuid) {
-      return { success: false, error: 'Mention UUID is required' };
-    }
-
-    try {
-      const api = createApiClient(store);
-      const response = await api.post(`/api/chat/mentions/${mentionUuid}/read`);
-
-      if (response.status >= 400) {
-        return {
-          success: false,
-          error: response.data?.error || 'Failed to mark mention as read',
-        };
-      }
-
-      return { success: true, data: response.data };
-    } catch (error) {
-      console.error('[Mentions] Mark read error:', error.message);
-      return handleNetworkError(error, 'Failed to mark mention as read');
-    }
-  });
-
-  /**
-   * Mark all mentions as read
-   */
-  ipcMain.handle('mentions:mark-all-read', async () => {
-    const authCheck = validateAuth();
-    if (!authCheck.isValid) {
-      return { success: false, error: authCheck.error };
-    }
-
-    try {
-      const api = createApiClient(store);
-      const response = await api.post('/api/chat/mentions/read-all');
-
-      if (response.status >= 400) {
-        return {
-          success: false,
-          error: response.data?.error || 'Failed to mark all mentions as read',
-        };
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('[Mentions] Mark all read error:', error.message);
-      return handleNetworkError(error, 'Failed to mark all mentions as read');
-    }
-  });
-
-  /**
-   * Get unread mention count
-   */
-  ipcMain.handle('mentions:get-unread-count', async () => {
-    const authCheck = validateAuth();
-    if (!authCheck.isValid) {
-      return { success: false, error: authCheck.error };
-    }
-
-    try {
-      const api = createApiClient(store);
-      const response = await api.get('/api/chat/mentions', {
-        params: { unread_only: true },
-      });
-
-      if (response.status >= 400) {
-        return {
-          success: false,
-          error: response.data?.error || 'Failed to get unread count',
-        };
-      }
-
-      return { success: true, data: { count: response.data.unread_count || 0 } };
-    } catch (error) {
-      console.error('[Mentions] Get unread count error:', error.message);
-      return handleNetworkError(error, 'Failed to get unread count');
-    }
-  });
-
   // ============ Files ============
 
   /**
@@ -1201,22 +1085,32 @@ const register = (ipcMain, store, getSocketService) => {
    * Upload file from buffer (for drag and drop / paste)
    */
   ipcMain.handle('files:upload-buffer', async (_, { buffer, fileName, channelUuid }) => {
+    console.log('[Files] ========== UPLOAD BUFFER START ==========');
+    console.log('[Files] File name:', fileName);
+    console.log('[Files] Channel UUID:', channelUuid);
+    console.log('[Files] Buffer length:', buffer?.length);
+
     const authCheck = validateAuth();
     if (!authCheck.isValid) {
+      console.log('[Files] Auth check failed');
       return { success: false, error: authCheck.error };
     }
 
     if (!buffer || !fileName) {
+      console.log('[Files] Missing buffer or fileName');
       return { success: false, error: 'Buffer and file name are required' };
     }
 
     if (!channelUuid) {
+      console.log('[Files] Missing channelUuid');
       return { success: false, error: 'Channel UUID is required' };
     }
 
     try {
       const maxSize = 50 * 1024 * 1024; // 50MB limit
       const bufferData = Buffer.from(buffer);
+
+      console.log('[Files] Buffer created, size:', bufferData.length);
 
       if (bufferData.length > maxSize) {
         return { success: false, error: 'File size exceeds 50MB limit' };
@@ -1232,6 +1126,7 @@ const register = (ipcMain, store, getSocketService) => {
 
       // Get auth headers
       const auth = store.get('auth');
+      const config = require('../config');
       const headers = {
         ...formData.getHeaders(),
         Authorization: `Bearer ${auth.token}`,
@@ -1241,29 +1136,35 @@ const register = (ipcMain, store, getSocketService) => {
 
       // Upload to documents API (separate service on port 4010)
       const axios = require('axios');
-      const config = require('../config');
+      const uploadUrl = `${config.documentsApiUrl}/api/v2/documents/upload`;
 
-      const response = await axios.post(
-        `${config.documentsApiUrl}/api/v2/documents/upload`,
-        formData,
-        {
-          headers,
-          timeout: TIMEOUTS.upload,
-          maxContentLength: maxSize,
-          maxBodyLength: maxSize,
-        }
-      );
+      console.log('[Files] Uploading buffer to:', uploadUrl);
+
+      const response = await axios.post(uploadUrl, formData, {
+        headers,
+        timeout: TIMEOUTS.upload,
+        maxContentLength: maxSize,
+        maxBodyLength: maxSize,
+        validateStatus: () => true,
+      });
+
+      console.log('[Files] Upload response status:', response.status);
+      console.log('[Files] Upload response data:', JSON.stringify(response.data, null, 2));
 
       if (response.status >= 400) {
+        const errorMsg = response.data?.error || response.data?.json?.error || 'Failed to upload file';
+        console.error('[Files] Upload failed:', errorMsg);
         return {
           success: false,
-          error: response.data?.error || 'Failed to upload file',
+          error: errorMsg,
         };
       }
 
-      const uploadData = response.data?.data || response.data;
+      const responseData = response.data;
+      const uploadData = responseData?.data || responseData?.json?.data || responseData;
 
-      console.log('[Files] Uploaded buffer attachment:', fileName);
+      console.log('[Files] Parsed upload data:', uploadData);
+      console.log('[Files] ========== UPLOAD BUFFER END ==========');
 
       return {
         success: true,
@@ -1276,7 +1177,9 @@ const register = (ipcMain, store, getSocketService) => {
         },
       };
     } catch (error) {
-      console.error('[Files] Upload buffer error:', error.message);
+      console.error('[Files] ========== UPLOAD BUFFER ERROR ==========');
+      console.error('[Files] Error message:', error.message);
+      console.error('[Files] Error code:', error.code);
       return handleNetworkError(error, 'Failed to upload file');
     }
   });
@@ -1556,6 +1459,153 @@ const register = (ipcMain, store, getSocketService) => {
     } catch (error) {
       console.error('[Invites] Decline error:', error.message);
       return handleNetworkError(error, 'Failed to decline invite');
+    }
+  });
+
+  // ============ Mentions ============
+
+  /**
+   * Get mentions for current user
+   */
+  ipcMain.handle('mentions:list', async (_, params = {}) => {
+    const authCheck = validateAuth();
+    if (!authCheck.isValid) {
+      return { success: false, error: authCheck.error };
+    }
+
+    try {
+      const api = createApiClient(store);
+      const response = await withRetry(() =>
+        api.get('/api/chat/mentions', { params })
+      );
+
+      if (response.status >= 400) {
+        return {
+          success: false,
+          error: response.data?.error || 'Failed to fetch mentions',
+        };
+      }
+
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('[Mentions] List error:', error.message);
+      return handleNetworkError(error, 'Failed to fetch mentions');
+    }
+  });
+
+  /**
+   * Get unread mentions count
+   */
+  ipcMain.handle('mentions:unread-count', async () => {
+    const authCheck = validateAuth();
+    if (!authCheck.isValid) {
+      return { success: false, error: authCheck.error };
+    }
+
+    try {
+      const api = createApiClient(store);
+      const response = await api.get('/api/chat/mentions/unread/count');
+
+      if (response.status >= 400) {
+        return {
+          success: false,
+          error: response.data?.error || 'Failed to fetch unread count',
+        };
+      }
+
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('[Mentions] Unread count error:', error.message);
+      return handleNetworkError(error, 'Failed to fetch unread count');
+    }
+  });
+
+  /**
+   * Mark mention as read
+   */
+  ipcMain.handle('mentions:mark-read', async (_, mentionUuid) => {
+    const authCheck = validateAuth();
+    if (!authCheck.isValid) {
+      return { success: false, error: authCheck.error };
+    }
+
+    if (!mentionUuid) {
+      return { success: false, error: 'Mention UUID is required' };
+    }
+
+    try {
+      const api = createApiClient(store);
+      const response = await api.post(`/api/chat/mentions/${mentionUuid}/read`);
+
+      if (response.status >= 400) {
+        return {
+          success: false,
+          error: response.data?.error || 'Failed to mark mention as read',
+        };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('[Mentions] Mark read error:', error.message);
+      return handleNetworkError(error, 'Failed to mark mention as read');
+    }
+  });
+
+  /**
+   * Mark all mentions as read
+   */
+  ipcMain.handle('mentions:mark-all-read', async () => {
+    const authCheck = validateAuth();
+    if (!authCheck.isValid) {
+      return { success: false, error: authCheck.error };
+    }
+
+    try {
+      const api = createApiClient(store);
+      const response = await api.post('/api/chat/mentions/read-all');
+
+      if (response.status >= 400) {
+        return {
+          success: false,
+          error: response.data?.error || 'Failed to mark all mentions as read',
+        };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('[Mentions] Mark all read error:', error.message);
+      return handleNetworkError(error, 'Failed to mark all mentions as read');
+    }
+  });
+
+  /**
+   * Get mentionable users for autocomplete
+   */
+  ipcMain.handle('mentions:users', async (_, { channelUuid, search } = {}) => {
+    const authCheck = validateAuth();
+    if (!authCheck.isValid) {
+      return { success: false, error: authCheck.error };
+    }
+
+    try {
+      const api = createApiClient(store);
+      const params = {};
+      if (channelUuid) params.channel_uuid = channelUuid;
+      if (search) params.q = search;
+
+      const response = await api.get('/api/chat/users/mentionable', { params });
+
+      if (response.status >= 400) {
+        return {
+          success: false,
+          error: response.data?.error || 'Failed to fetch mentionable users',
+        };
+      }
+
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('[Mentions] Users error:', error.message);
+      return handleNetworkError(error, 'Failed to fetch mentionable users');
     }
   });
 };

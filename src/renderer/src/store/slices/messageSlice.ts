@@ -56,10 +56,11 @@ export const sendMessage = createAsyncThunk<
     contentType?: 'text' | 'code' | 'markdown';
     parentMessageUuid?: string;
     attachments?: any[];
+    mentions?: Array<{ uuid: string; type: string }>;
   }
 >(
   'message/sendMessage',
-  async ({ channelUuid, content, contentType = 'text', parentMessageUuid, attachments }, { rejectWithValue }) => {
+  async ({ channelUuid, content, contentType = 'text', parentMessageUuid, attachments, mentions }, { rejectWithValue }) => {
     try {
       const result = await window.electronAPI.invoke<Message>('messages:send', {
         channelUuid,
@@ -68,6 +69,7 @@ export const sendMessage = createAsyncThunk<
           content_type: contentType,
           parent_message_uuid: parentMessageUuid,
           attachments,
+          mentions,
         },
       });
       if (!result.success) {

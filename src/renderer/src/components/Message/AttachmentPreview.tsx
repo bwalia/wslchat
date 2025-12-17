@@ -4,6 +4,7 @@ import clsx from 'clsx';
 export interface PendingAttachment {
   id: string;
   path?: string;
+  file?: File; // Original File object for buffer-based upload (drag & drop)
   name: string;
   size: number;
   type: string;
