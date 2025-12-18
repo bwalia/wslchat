@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "../../hooks/useAppDispatch";
 import { sendMessage } from "../../store/slices/messageSlice";
 import { useTypingIndicator } from "../../hooks/useSocketEvents";
@@ -769,23 +769,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
     [sendTyping, checkForMentionTrigger]
   );
 
-  // Set up keyboard event listener for editor
-  useEffect(() => {
-    const editor = editorRef.current;
-    if (!editor) return;
-
-    const handleEditorKeyUp = () => {
-      // Re-check mention trigger on key up
-      checkForMentionTrigger();
-    };
-
-    // Add event listener to editor
-    editor.events?.on("keyup", handleEditorKeyUp);
-
-    return () => {
-      editor.events?.off("keyup", handleEditorKeyUp);
-    };
-  }, [checkForMentionTrigger]);
 
   // Extract mentions from HTML content
   const extractMentions = useCallback((html: string): Array<{ uuid: string; type: string }> => {
@@ -858,9 +841,19 @@ const MessageInput: React.FC<MessageInputProps> = ({
       setContent("");
       setAttachments([]);
 
-      // Clear editor content if ref is available
+      // Clear editor content safely using Jodit API
       if (editorRef.current) {
-        editorRef.current.value = "";
+        try {
+          // Use setEditorValue for safe value update
+          if (typeof editorRef.current.setEditorValue === "function") {
+            editorRef.current.setEditorValue("");
+          } else if (editorRef.current.editor) {
+            // Fallback: clear via innerHTML
+            editorRef.current.editor.innerHTML = "";
+          }
+        } catch {
+          // Ignore editor clearing errors - state is already cleared
+        }
       }
     } catch (error) {
       console.error("[MessageInput] Error sending message:", error);

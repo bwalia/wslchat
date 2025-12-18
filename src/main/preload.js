@@ -84,7 +84,8 @@ const validInvokeChannels = [
   'mentions:list',
   'mentions:mark-read',
   'mentions:mark-all-read',
-  'mentions:get-unread-count',
+  'mentions:unread-count',
+  'mentions:users',
 
   // Files
   'files:upload',

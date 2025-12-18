@@ -1584,6 +1584,7 @@ const register = (ipcMain, store, getSocketService) => {
   ipcMain.handle('mentions:users', async (_, { channelUuid, search } = {}) => {
     const authCheck = validateAuth();
     if (!authCheck.isValid) {
+      console.log('[Mentions] Auth check failed:', authCheck.error);
       return { success: false, error: authCheck.error };
     }
 
@@ -1591,11 +1592,17 @@ const register = (ipcMain, store, getSocketService) => {
       const api = createApiClient(store);
       const params = {};
       if (channelUuid) params.channel_uuid = channelUuid;
-      if (search) params.q = search;
+      if (search !== undefined && search !== null) params.q = search;
+
+      console.log('[Mentions] Fetching mentionable users with params:', params);
 
       const response = await api.get('/api/chat/users/mentionable', { params });
 
+      console.log('[Mentions] Response status:', response.status);
+      console.log('[Mentions] Response data:', JSON.stringify(response.data, null, 2).substring(0, 500));
+
       if (response.status >= 400) {
+        console.error('[Mentions] Error response:', response.data);
         return {
           success: false,
           error: response.data?.error || 'Failed to fetch mentionable users',
