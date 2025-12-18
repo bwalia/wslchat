@@ -98,16 +98,28 @@ export const fetchMentionableUsers = createAsyncThunk(
     params: { channelUuid?: string; search?: string } = {},
     { rejectWithValue }
   ) => {
-    const result = await window.electronAPI.invoke<{
-      data: MentionableUser[];
-      special_mentions: SpecialMention[];
-    }>("mentions:users", params);
+    try {
+      const result = await window.electronAPI.invoke<{
+        data: MentionableUser[];
+        special_mentions: SpecialMention[];
+      }>("mentions:users", params);
 
-    if (!result.success) {
-      return rejectWithValue(result.error || "Failed to fetch mentionable users");
+      if (!result.success) {
+        return rejectWithValue(result.error || "Failed to fetch mentionable users");
+      }
+
+      // The API returns { data: [...users], special_mentions: [...] }
+      // result.data contains this structure
+      const users = result.data?.data || [];
+      const specialMentions = result.data?.special_mentions || [];
+
+      return {
+        users,
+        specialMentions,
+      };
+    } catch (error) {
+      return rejectWithValue("Failed to fetch mentionable users");
     }
-
-    return result.data;
   }
 );
 
@@ -187,13 +199,14 @@ const mentionSlice = createSlice({
       })
       .addCase(fetchMentionableUsers.fulfilled, (state, action) => {
         state.isLoadingUsers = false;
-        state.mentionableUsers = action.payload?.data || [];
-        if (action.payload?.special_mentions) {
-          state.specialMentions = action.payload.special_mentions;
+        state.mentionableUsers = action.payload?.users || [];
+        if (action.payload?.specialMentions && action.payload.specialMentions.length > 0) {
+          state.specialMentions = action.payload.specialMentions;
         }
       })
       .addCase(fetchMentionableUsers.rejected, (state) => {
         state.isLoadingUsers = false;
+        state.mentionableUsers = [];
       });
   },
 });

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useRef, useCallback, useState, useMemo } from "react";
 import { useAppDispatch, useAppSelector } from "../../hooks/useAppDispatch";
 import { fetchMentionableUsers, clearMentionableUsers } from "../../store/slices/mentionSlice";
 import type { MentionableUser, SpecialMention } from "../../types";
@@ -13,6 +13,12 @@ interface MentionAutocompleteProps {
   isVisible: boolean;
 }
 
+// Debounce delay for API calls (ms)
+const DEBOUNCE_DELAY = 300;
+
+// Minimum characters before triggering API search (for performance)
+const MIN_SEARCH_LENGTH = 2;
+
 const MentionAutocomplete: React.FC<MentionAutocompleteProps> = ({
   channelUuid,
   searchTerm,
@@ -26,30 +32,80 @@ const MentionAutocomplete: React.FC<MentionAutocompleteProps> = ({
   const { mentionableUsers, specialMentions, isLoadingUsers } = useAppSelector(
     (state) => state.mention
   );
-  const [selectedIndex, setSelectedIndex] = React.useState(0);
+  const [selectedIndex, setSelectedIndex] = useState(0);
 
-  // Filter special mentions based on search term
-  const filteredSpecialMentions = specialMentions.filter((m) =>
-    m.display.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Track if we've fetched the initial list for this channel
+  const hasFetchedRef = useRef(false);
+  const lastChannelRef = useRef<string>("");
+  const lastSearchRef = useRef<string>("");
+
+  // Filter special mentions based on search term (always local filtering)
+  const filteredSpecialMentions = useMemo(() => {
+    if (!searchTerm) return specialMentions;
+    const lowerSearch = searchTerm.toLowerCase();
+    return specialMentions.filter(
+      (m) =>
+        m.display.toLowerCase().includes(lowerSearch) ||
+        m.id.toLowerCase().includes(lowerSearch)
+    );
+  }, [specialMentions, searchTerm]);
+
+  // Filter users locally when we have cached data
+  const filteredUsers = useMemo(() => {
+    if (!searchTerm) return mentionableUsers;
+    const lowerSearch = searchTerm.toLowerCase();
+    return mentionableUsers.filter(
+      (u) =>
+        u.username?.toLowerCase().includes(lowerSearch) ||
+        u.first_name?.toLowerCase().includes(lowerSearch) ||
+        u.last_name?.toLowerCase().includes(lowerSearch) ||
+        u.display_name?.toLowerCase().includes(lowerSearch) ||
+        u.email?.toLowerCase().includes(lowerSearch)
+    );
+  }, [mentionableUsers, searchTerm]);
 
   // Combine special mentions and users
-  const allOptions = [...filteredSpecialMentions, ...mentionableUsers];
+  const allOptions: (MentionableUser | SpecialMention)[] = useMemo(
+    () => [...filteredSpecialMentions, ...filteredUsers],
+    [filteredSpecialMentions, filteredUsers]
+  );
 
-  // Fetch users when search term changes
+  // Fetch users with smart caching and debouncing
   useEffect(() => {
-    if (isVisible && searchTerm.length >= 0) {
-      const debounceTimer = setTimeout(() => {
+    if (!isVisible) {
+      return;
+    }
+
+    // Reset fetch state when channel changes
+    if (lastChannelRef.current !== channelUuid) {
+      hasFetchedRef.current = false;
+      lastChannelRef.current = channelUuid;
+    }
+
+    // Determine if we need to make an API call
+    const shouldFetch = !hasFetchedRef.current ||
+      (searchTerm.length >= MIN_SEARCH_LENGTH && lastSearchRef.current !== searchTerm);
+
+    if (!shouldFetch) {
+      return;
+    }
+
+    // Debounce the API call
+    const debounceTimer = setTimeout(() => {
+      // Only fetch if search term meets minimum length or we're doing initial load
+      if (!hasFetchedRef.current || searchTerm.length >= MIN_SEARCH_LENGTH) {
         dispatch(
           fetchMentionableUsers({
             channelUuid,
-            search: searchTerm,
+            search: searchTerm.length >= MIN_SEARCH_LENGTH ? searchTerm : undefined,
           })
         );
-      }, 150);
+        hasFetchedRef.current = true;
+        lastSearchRef.current = searchTerm;
+      }
+    }, hasFetchedRef.current ? DEBOUNCE_DELAY : 50); // Faster initial load
 
-      return () => clearTimeout(debounceTimer);
-    }
+    return () => clearTimeout(debounceTimer);
   }, [dispatch, channelUuid, searchTerm, isVisible]);
 
   // Reset selected index when options change
@@ -57,20 +113,33 @@ const MentionAutocomplete: React.FC<MentionAutocompleteProps> = ({
     setSelectedIndex(0);
   }, [allOptions.length]);
 
-  // Handle keyboard navigation
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (!isVisible || allOptions.length === 0) return;
+  // Handle selection
+  const handleSelect = useCallback(
+    (option: MentionableUser | SpecialMention) => {
+      onSelect(option);
+    },
+    [onSelect]
+  );
+
+  // Handle keyboard navigation - using capture phase to intercept before editor
+  useEffect(() => {
+    if (!isVisible) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle if we have options
+      if (allOptions.length === 0) return;
 
       switch (e.key) {
         case "ArrowDown":
           e.preventDefault();
+          e.stopPropagation();
           setSelectedIndex((prev) =>
             prev < allOptions.length - 1 ? prev + 1 : 0
           );
           break;
         case "ArrowUp":
           e.preventDefault();
+          e.stopPropagation();
           setSelectedIndex((prev) =>
             prev > 0 ? prev - 1 : allOptions.length - 1
           );
@@ -78,29 +147,29 @@ const MentionAutocomplete: React.FC<MentionAutocompleteProps> = ({
         case "Enter":
         case "Tab":
           e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
           if (allOptions[selectedIndex]) {
-            onSelect(allOptions[selectedIndex]);
+            handleSelect(allOptions[selectedIndex]);
           }
           break;
         case "Escape":
           e.preventDefault();
+          e.stopPropagation();
           onClose();
           break;
       }
-    },
-    [isVisible, allOptions, selectedIndex, onSelect, onClose]
-  );
+    };
 
-  // Add keyboard listener
-  useEffect(() => {
-    if (isVisible) {
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [isVisible, handleKeyDown]);
+    // Use capture phase to intercept events before they reach the editor
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
+  }, [isVisible, allOptions, selectedIndex, handleSelect, onClose]);
 
   // Handle click outside
   useEffect(() => {
+    if (!isVisible) return;
+
     const handleClickOutside = (e: MouseEvent) => {
       if (
         containerRef.current &&
@@ -110,10 +179,15 @@ const MentionAutocomplete: React.FC<MentionAutocompleteProps> = ({
       }
     };
 
-    if (isVisible) {
+    // Use slight delay to avoid immediate close on click that opened the menu
+    const timer = setTimeout(() => {
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, [isVisible, onClose]);
 
   // Cleanup on unmount
@@ -122,6 +196,17 @@ const MentionAutocomplete: React.FC<MentionAutocompleteProps> = ({
       dispatch(clearMentionableUsers());
     };
   }, [dispatch]);
+
+  // Scroll selected item into view
+  useEffect(() => {
+    if (!isVisible) return;
+    const selectedElement = containerRef.current?.querySelector(
+      `[data-index="${selectedIndex}"]`
+    );
+    if (selectedElement) {
+      selectedElement.scrollIntoView({ block: "nearest" });
+    }
+  }, [selectedIndex, isVisible]);
 
   if (!isVisible) return null;
 
@@ -144,6 +229,15 @@ const MentionAutocomplete: React.FC<MentionAutocompleteProps> = ({
     }
   };
 
+  const handleItemClick = (
+    e: React.MouseEvent,
+    option: MentionableUser | SpecialMention
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleSelect(option);
+  };
+
   return (
     <div
       ref={containerRef}
@@ -151,9 +245,10 @@ const MentionAutocomplete: React.FC<MentionAutocompleteProps> = ({
       style={{
         position: "absolute",
         bottom: position.top,
-        left: position.left,
-        zIndex: 1000,
+        left: Math.max(0, position.left),
+        zIndex: 9999,
       }}
+      onMouseDown={(e) => e.preventDefault()} // Prevent focus loss
     >
       <div className="mention-autocomplete-container">
         {isLoadingUsers && allOptions.length === 0 ? (
@@ -162,18 +257,23 @@ const MentionAutocomplete: React.FC<MentionAutocompleteProps> = ({
           </div>
         ) : allOptions.length === 0 ? (
           <div className="mention-autocomplete-empty">
-            <span className="text-sm text-secondary-500">No users found</span>
+            <span className="text-sm text-secondary-500">
+              {searchTerm ? `No users found for "${searchTerm}"` : "No users available"}
+            </span>
           </div>
         ) : (
-          <ul className="mention-autocomplete-list">
+          <ul className="mention-autocomplete-list" role="listbox">
             {allOptions.map((option, index) => (
               <li
                 key={isSpecialMention(option) ? option.id : option.uuid}
+                data-index={index}
+                role="option"
+                aria-selected={index === selectedIndex}
                 className={clsx(
                   "mention-autocomplete-item",
                   index === selectedIndex && "selected"
                 )}
-                onClick={() => onSelect(option)}
+                onMouseDown={(e) => handleItemClick(e, option)}
                 onMouseEnter={() => setSelectedIndex(index)}
               >
                 {isSpecialMention(option) ? (
@@ -219,7 +319,7 @@ const MentionAutocomplete: React.FC<MentionAutocompleteProps> = ({
                     </div>
                     <div className="mention-user-info">
                       <span className="mention-user-name">
-                        {option.display_name || option.username || "Unknown"}
+                        {option.display_name?.trim() || option.username || "Unknown"}
                       </span>
                       {option.username && (
                         <span className="mention-user-username">
