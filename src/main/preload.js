@@ -112,6 +112,14 @@ const validInvokeChannels = [
   'socket:disconnect',
   'socket:join-channel',
   'socket:leave-channel',
+
+  // Kanban
+  'kanban:get-project-by-channel',
+  'kanban:get-tasks',
+  'kanban:timer-start',
+  'kanban:timer-stop',
+  'kanban:timer-current',
+  'kanban:get-task-time-entries',
 ];
 
 const validReceiveChannels = [

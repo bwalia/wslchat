@@ -1042,4 +1042,408 @@
   .no-drag {
     -webkit-app-region: no-drag;
   }
+
+  /* ----------------------------------------
+   * CHANNEL TABS
+   * ---------------------------------------- */
+  .channel-tabs {
+    @apply flex items-center gap-1 px-4 py-2
+           border-b border-secondary-200 dark:border-secondary-700
+           bg-white dark:bg-secondary-900;
+  }
+
+  .channel-tab {
+    @apply flex items-center gap-2 px-4 py-2 rounded-lg
+           text-sm font-medium
+           text-secondary-600 dark:text-secondary-400
+           hover:bg-secondary-100 dark:hover:bg-secondary-800
+           transition-all duration-200;
+  }
+
+  .channel-tab-active {
+    @apply bg-primary-50 dark:bg-primary-900/20
+           text-primary-600 dark:text-primary-400;
+  }
+
+  /* ----------------------------------------
+   * TASKS TAB
+   * ---------------------------------------- */
+  .tasks-tab {
+    @apply flex-1 flex flex-col overflow-hidden
+           bg-white dark:bg-secondary-900;
+  }
+
+  .tasks-tab-header {
+    @apply flex items-center justify-between px-6 py-4
+           border-b border-secondary-200 dark:border-secondary-700;
+  }
+
+  .tasks-tab-title {
+    @apply flex items-center gap-3;
+  }
+
+  .tasks-tab-title h2 {
+    @apply text-lg font-semibold text-secondary-900 dark:text-white;
+  }
+
+  .tasks-tab-count {
+    @apply text-sm text-secondary-500 dark:text-secondary-400;
+  }
+
+  .tasks-tab-running-timer {
+    @apply flex items-center gap-2 px-3 py-1.5 rounded-full
+           bg-green-50 dark:bg-green-900/20
+           text-green-700 dark:text-green-400;
+  }
+
+  .tasks-tab-filters {
+    @apply flex items-center gap-3 px-6 py-3
+           border-b border-secondary-100 dark:border-secondary-800;
+  }
+
+  .tasks-search {
+    @apply flex items-center gap-2 flex-1
+           px-3 py-2 rounded-lg
+           bg-secondary-100 dark:bg-secondary-800;
+  }
+
+  .tasks-search-input {
+    @apply flex-1 bg-transparent border-none outline-none
+           text-sm text-secondary-900 dark:text-white
+           placeholder-secondary-400 dark:placeholder-secondary-500;
+  }
+
+  .tasks-filter-select {
+    @apply px-3 py-2 rounded-lg
+           bg-secondary-100 dark:bg-secondary-800
+           text-sm text-secondary-700 dark:text-secondary-300
+           border-none outline-none cursor-pointer;
+  }
+
+  .tasks-tab-list {
+    @apply flex-1 overflow-y-auto p-4 space-y-2;
+  }
+
+  .tasks-tab-loading {
+    @apply flex-1 flex flex-col items-center justify-center;
+  }
+
+  .tasks-tab-empty {
+    @apply flex-1 flex flex-col items-center justify-center p-8;
+  }
+
+  .tasks-tab-empty-list {
+    @apply flex items-center justify-center p-8;
+  }
+
+  /* ----------------------------------------
+   * TASK ITEM
+   * ---------------------------------------- */
+  .task-item {
+    @apply flex items-center justify-between gap-4 p-4 rounded-lg
+           bg-secondary-50 dark:bg-secondary-800
+           hover:bg-secondary-100 dark:hover:bg-secondary-700
+           transition-colors duration-200;
+  }
+
+  .task-item-content {
+    @apply flex-1 min-w-0;
+  }
+
+  .task-item-header {
+    @apply flex items-center gap-2 mb-2;
+  }
+
+  .task-item-number {
+    @apply text-sm font-medium text-secondary-400 dark:text-secondary-500;
+  }
+
+  .task-item-title {
+    @apply text-sm font-medium text-secondary-900 dark:text-white
+           truncate;
+  }
+
+  .task-item-badges {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  .task-badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+  }
+
+  .task-badge-priority {
+    @apply text-sm font-bold;
+  }
+
+  .task-badge-date {
+    @apply inline-flex items-center text-xs
+           text-secondary-500 dark:text-secondary-400;
+  }
+
+  .task-badge-overdue {
+    @apply text-red-500 dark:text-red-400 font-medium;
+  }
+
+  .task-badge-time {
+    @apply inline-flex items-center text-xs
+           text-secondary-500 dark:text-secondary-400;
+  }
+
+  .task-item-actions {
+    @apply flex items-center gap-3;
+  }
+
+  .task-item-assignees {
+    @apply flex items-center -space-x-2;
+  }
+
+  .task-assignee-avatar {
+    @apply w-7 h-7 rounded-full
+           bg-primary-100 dark:bg-primary-800
+           text-primary-700 dark:text-primary-200
+           text-xs font-medium
+           flex items-center justify-center
+           border-2 border-white dark:border-secondary-800;
+  }
+
+  .task-assignee-more {
+    @apply bg-secondary-200 dark:bg-secondary-700
+           text-secondary-600 dark:text-secondary-300;
+  }
+
+  /* ----------------------------------------
+   * TIMER BUTTON
+   * ---------------------------------------- */
+  .timer-button {
+    @apply flex items-center gap-2 px-3 py-2 rounded-lg
+           text-sm font-medium
+           bg-secondary-100 dark:bg-secondary-700
+           text-secondary-700 dark:text-secondary-300
+           hover:bg-secondary-200 dark:hover:bg-secondary-600
+           transition-all duration-200;
+  }
+
+  .timer-button-running {
+    @apply bg-green-100 dark:bg-green-900/40
+           text-green-700 dark:text-green-400
+           hover:bg-green-200 dark:hover:bg-green-900/60;
+  }
+
+  .timer-button-running .timer-time {
+    @apply font-mono;
+  }
+
+  .timer-button-loading {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  /* ----------------------------------------
+   * TIMER CONFIRMATION DIALOG
+   * ---------------------------------------- */
+  .timer-confirmation-overlay {
+    @apply fixed inset-0 z-50
+           bg-black/50 backdrop-blur-sm
+           flex items-center justify-center;
+  }
+
+  .timer-confirmation-dialog {
+    @apply w-full max-w-md mx-4 p-6 rounded-xl
+           bg-white dark:bg-secondary-800
+           shadow-xl;
+  }
+
+  .timer-confirmation-header {
+    @apply flex items-center gap-3 mb-4;
+  }
+
+  .timer-confirmation-header h3 {
+    @apply text-lg font-semibold text-secondary-900 dark:text-white;
+  }
+
+  .timer-confirmation-body {
+    @apply text-secondary-600 dark:text-secondary-400 text-sm;
+  }
+
+  .timer-confirmation-footer {
+    @apply flex justify-end gap-3 mt-6;
+  }
+
+  /* ----------------------------------------
+   * TASK ITEM CLICKABLE
+   * ---------------------------------------- */
+  .task-item-clickable {
+    @apply cursor-pointer;
+  }
+
+  /* ----------------------------------------
+   * TIMER BUTTON LARGE
+   * ---------------------------------------- */
+  .timer-button-large {
+    @apply px-4 py-3 text-base;
+  }
+
+  /* ----------------------------------------
+   * TASK DETAIL MODAL
+   * ---------------------------------------- */
+  .task-detail-overlay {
+    @apply fixed inset-0 z-50
+           bg-black/50 backdrop-blur-sm
+           flex items-center justify-center
+           p-4;
+  }
+
+  .task-detail-modal {
+    @apply w-full max-w-2xl max-h-[90vh]
+           bg-white dark:bg-secondary-800
+           rounded-xl shadow-2xl
+           flex flex-col
+           overflow-hidden;
+  }
+
+  .task-detail-header {
+    @apply flex items-center justify-between
+           px-6 py-4
+           border-b border-secondary-200 dark:border-secondary-700;
+  }
+
+  .task-detail-header-left {
+    @apply flex items-center gap-3 min-w-0 flex-1;
+  }
+
+  .task-detail-number {
+    @apply text-sm font-medium text-secondary-400 dark:text-secondary-500
+           flex-shrink-0;
+  }
+
+  .task-detail-title {
+    @apply text-lg font-semibold text-secondary-900 dark:text-white
+           truncate;
+  }
+
+  .task-detail-close {
+    @apply p-2 rounded-lg
+           text-secondary-400 hover:text-secondary-600
+           dark:text-secondary-500 dark:hover:text-secondary-300
+           hover:bg-secondary-100 dark:hover:bg-secondary-700
+           transition-colors duration-200
+           flex-shrink-0;
+  }
+
+  .task-detail-content {
+    @apply flex-1 overflow-y-auto px-6 py-4
+           space-y-6;
+  }
+
+  .task-detail-row {
+    @apply flex gap-6;
+  }
+
+  .task-detail-field {
+    @apply flex-1;
+  }
+
+  .task-detail-label {
+    @apply block text-xs font-medium text-secondary-500 dark:text-secondary-400
+           uppercase tracking-wider mb-2;
+  }
+
+  .task-detail-priority {
+    @apply inline-flex items-center gap-1
+           text-sm font-medium;
+  }
+
+  .task-detail-date {
+    @apply inline-flex items-center
+           text-sm text-secondary-700 dark:text-secondary-300;
+  }
+
+  .task-detail-date-overdue {
+    @apply text-red-500 dark:text-red-400;
+  }
+
+  .task-detail-time {
+    @apply inline-flex items-center
+           text-sm text-secondary-700 dark:text-secondary-300;
+  }
+
+  .task-detail-section {
+    @apply space-y-2;
+  }
+
+  .task-detail-description {
+    @apply text-sm text-secondary-700 dark:text-secondary-300
+           bg-secondary-50 dark:bg-secondary-900
+           rounded-lg p-4
+           whitespace-pre-wrap;
+  }
+
+  .task-detail-assignees {
+    @apply space-y-2;
+  }
+
+  .task-detail-assignee {
+    @apply flex items-center gap-3
+           p-3 rounded-lg
+           bg-secondary-50 dark:bg-secondary-900;
+  }
+
+  .task-detail-assignee-current {
+    @apply bg-primary-50 dark:bg-primary-900/30
+           ring-1 ring-primary-200 dark:ring-primary-700;
+  }
+
+  .task-detail-assignee-avatar {
+    @apply w-10 h-10 rounded-full
+           bg-primary-100 dark:bg-primary-800
+           text-primary-700 dark:text-primary-200
+           text-sm font-medium
+           flex items-center justify-center
+           flex-shrink-0;
+  }
+
+  .task-detail-assignee-info {
+    @apply flex flex-col min-w-0;
+  }
+
+  .task-detail-assignee-name {
+    @apply text-sm font-medium text-secondary-900 dark:text-white
+           truncate;
+  }
+
+  .task-detail-assignee-you {
+    @apply ml-2 text-xs text-primary-500 font-normal;
+  }
+
+  .task-detail-assignee-email {
+    @apply text-xs text-secondary-500 dark:text-secondary-400
+           truncate;
+  }
+
+  .task-detail-timer-section {
+    @apply bg-green-50 dark:bg-green-900/20
+           border border-green-200 dark:border-green-800
+           rounded-lg p-4;
+  }
+
+  .task-detail-timer {
+    @apply space-y-3;
+  }
+
+  .task-detail-timer-hint {
+    @apply text-sm text-green-700 dark:text-green-300;
+  }
+
+  .task-detail-not-assigned {
+    @apply flex items-center
+           text-sm text-secondary-500 dark:text-secondary-400
+           bg-secondary-50 dark:bg-secondary-900
+           rounded-lg p-4;
+  }
+
+  .task-detail-footer {
+    @apply flex items-center justify-between
+           px-6 py-3
+           border-t border-secondary-200 dark:border-secondary-700
+           bg-secondary-50 dark:bg-secondary-900;
+  }
 }

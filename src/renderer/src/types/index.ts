@@ -34,6 +34,9 @@ export interface Channel {
   notification_preference?: "all" | "mentions" | "none";
   created_at: string;
   updated_at: string;
+  // Kanban project link
+  linked_task_uuid?: string;
+  linked_task_id?: number;
 }
 
 export interface ChannelMember {
@@ -245,6 +248,94 @@ export interface IpcResponse<T = any> {
 }
 
 // Electron API types
+// Kanban types
+export type TaskStatus = "backlog" | "todo" | "in_progress" | "review" | "done" | "cancelled";
+export type TaskPriority = "low" | "medium" | "high" | "urgent";
+
+export interface TaskAssignee {
+  user_uuid: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  username?: string;
+}
+
+export interface KanbanTask {
+  uuid: string;
+  id: number;
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  due_date?: string;
+  estimated_minutes?: number;
+  time_spent_minutes?: number;
+  assignees?: TaskAssignee[];
+  task_number?: number;
+  board_id?: number;
+  column_id?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KanbanBoard {
+  uuid: string;
+  id: number;
+  project_id: number;
+  name: string;
+  description?: string;
+  position?: number;
+  is_default?: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KanbanProject {
+  uuid: string;
+  id: number;
+  name: string;
+  description?: string;
+  status: "active" | "on_hold" | "completed" | "archived" | "cancelled";
+  chat_channel_uuid?: string;
+  namespace_id?: number;
+  boards?: KanbanBoard[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TimeEntry {
+  uuid: string;
+  task_id: number;
+  user_uuid: string;
+  description?: string;
+  started_at: string;
+  ended_at?: string;
+  duration_minutes: number;
+  status: "running" | "logged" | "approved" | "invoiced" | "rejected";
+  is_billable: boolean;
+  hourly_rate?: number;
+  billed_amount?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RunningTimer {
+  uuid: string;
+  task_id: number;
+  task_uuid: string;
+  task_title: string;
+  task_number?: number;
+  board_name?: string;
+  project_uuid?: string;
+  project_name?: string;
+  started_at: string;
+  elapsed_seconds?: number;
+  duration_minutes?: number;
+  description?: string;
+  user_uuid?: string;
+  running: boolean;
+}
+
 declare global {
   interface Window {
     electronAPI: {

@@ -64,12 +64,18 @@ export const logout = createAsyncThunk(
       const { resetPresenceState } = await import("./presenceSlice");
       const { resetUIState } = await import("./uiSlice");
       const { resetInviteState } = await import("./inviteSlice");
+      const { resetKanbanState } = await import("./kanbanSlice");
 
       dispatch(resetChannelState());
       dispatch(resetMessageState());
       dispatch(resetPresenceState());
       dispatch(resetUIState());
       dispatch(resetInviteState());
+      dispatch(resetKanbanState());
+
+      // Purge persisted storage to ensure clean state for next user
+      const { persistor } = await import("../index");
+      await persistor.purge();
 
       if (!result.success) {
         return rejectWithValue(result.error || "Logout failed");

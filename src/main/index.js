@@ -16,6 +16,7 @@ const channelHandlers = require('./handlers/channels');
 const messageHandlers = require('./handlers/messages');
 const userHandlers = require('./handlers/users');
 const presenceHandlers = require('./handlers/presence');
+const kanbanHandlers = require('./handlers/kanban');
 
 // Import services
 const SocketService = require('./services/socket');
@@ -183,6 +184,9 @@ const initializeIPC = () => {
 
   // Presence handlers
   presenceHandlers.register(ipcMain, store, () => socketService);
+
+  // Kanban handlers
+  kanbanHandlers.register(ipcMain, store);
 
   // App handlers
   ipcMain.handle('app:get-theme', () => store.get('theme'));

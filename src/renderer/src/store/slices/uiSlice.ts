@@ -1,6 +1,8 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import type { AppSettings } from '../../types';
 
+type ChannelTab = 'messages' | 'tasks';
+
 interface UIState {
   theme: 'light' | 'dark' | 'system';
   sidebarCollapsed: boolean;
@@ -15,6 +17,11 @@ interface UIState {
   membersDrawerOpen: boolean;
   settings: AppSettings;
   isSocketConnected: boolean;
+  // Channel tabs
+  activeChannelTab: ChannelTab;
+  // Timer confirmation dialog
+  timerConfirmationOpen: boolean;
+  pendingTimerTaskUuid: string | null;
 }
 
 const initialState: UIState = {
@@ -36,6 +43,9 @@ const initialState: UIState = {
     minimizeToTray: true,
   },
   isSocketConnected: false,
+  activeChannelTab: 'messages',
+  timerConfirmationOpen: false,
+  pendingTimerTaskUuid: null,
 };
 
 export const loadSettings = createAsyncThunk<AppSettings, void>(
@@ -147,6 +157,19 @@ const uiSlice = createSlice({
     setSocketConnected: (state, action: PayloadAction<boolean>) => {
       state.isSocketConnected = action.payload;
     },
+    // Channel tab management
+    setActiveChannelTab: (state, action: PayloadAction<ChannelTab>) => {
+      state.activeChannelTab = action.payload;
+    },
+    // Timer confirmation dialog
+    openTimerConfirmation: (state, action: PayloadAction<string>) => {
+      state.timerConfirmationOpen = true;
+      state.pendingTimerTaskUuid = action.payload;
+    },
+    closeTimerConfirmation: (state) => {
+      state.timerConfirmationOpen = false;
+      state.pendingTimerTaskUuid = null;
+    },
     // Reset UI state on logout (keep theme settings)
     resetUIState: (state) => {
       return {
@@ -198,6 +221,9 @@ export const {
   toggleMembersDrawer,
   setMembersDrawerOpen,
   setSocketConnected,
+  setActiveChannelTab,
+  openTimerConfirmation,
+  closeTimerConfirmation,
   resetUIState,
 } = uiSlice.actions;
 
