@@ -3,9 +3,6 @@ import { useAppDispatch, useAppSelector } from "../../hooks/useAppDispatch";
 import {
   fetchProjectByChannel,
   fetchTasksByBoard,
-  fetchRunningTimer,
-  startTimer,
-  stopTimer,
 } from "../../store/slices/kanbanSlice";
 import {
   openTimerConfirmation,
@@ -14,6 +11,7 @@ import {
 import TaskItem from "./TaskItem";
 import TaskDetailModal from "./TaskDetailModal";
 import { TimerConfirmationDialog } from "./TimerButton";
+import { useTimer } from "../../hooks/useTimer";
 import type { KanbanTask } from "../../types";
 
 interface TasksTabProps {
@@ -25,9 +23,21 @@ const TasksTab: React.FC<TasksTabProps> = ({ channelUuid }) => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null);
+  const [isTimerLoading, setIsTimerLoading] = useState(false);
+
+  // Timer service hook
+  const {
+    isRunning: timerIsRunning,
+    taskUuid: timerTaskUuid,
+    taskTitle: timerTaskTitle,
+    formattedTime,
+    startTimer,
+    stopTimer,
+    previousSeconds,
+  } = useTimer();
 
   // Redux state
-  const { projectByChannel, tasksByBoard, runningTimer, isLoadingTasks, isTimerLoading, isLoadingProject } =
+  const { projectByChannel, tasksByBoard, isLoadingTasks, isLoadingProject } =
     useAppSelector((state) => state.kanban);
   const { timerConfirmationOpen, pendingTimerTaskUuid } = useAppSelector(
     (state) => state.ui
@@ -53,7 +63,6 @@ const TasksTab: React.FC<TasksTabProps> = ({ channelUuid }) => {
   useEffect(() => {
     if (channelUuid) {
       dispatch(fetchProjectByChannel(channelUuid));
-      dispatch(fetchRunningTimer());
     }
   }, [dispatch, channelUuid]);
 
@@ -84,33 +93,49 @@ const TasksTab: React.FC<TasksTabProps> = ({ channelUuid }) => {
 
   // Handle start timer
   const handleStartTimer = useCallback(
-    (taskUuid: string) => {
+    async (taskUuid: string) => {
       // Check if there's already a running timer on a different task
-      if (runningTimer && runningTimer.task_uuid !== taskUuid) {
+      if (timerIsRunning && timerTaskUuid !== taskUuid) {
         // Show confirmation dialog
         dispatch(openTimerConfirmation(taskUuid));
       } else {
         // Start timer directly
-        dispatch(startTimer({ taskUuid }));
+        setIsTimerLoading(true);
+        const task = tasks.find(t => t.uuid === taskUuid);
+        // Get previous seconds from the task's time_spent_minutes (converted to seconds)
+        const prevSeconds = ((task?.time_spent_minutes || 0) * 60);
+        await startTimer(taskUuid, task?.id || 0, task?.title || "", prevSeconds);
+        setIsTimerLoading(false);
       }
     },
-    [dispatch, runningTimer]
+    [timerIsRunning, timerTaskUuid, tasks, startTimer, dispatch]
   );
 
   // Handle stop timer
-  const handleStopTimer = useCallback(() => {
-    dispatch(stopTimer());
-  }, [dispatch]);
+  const handleStopTimer = useCallback(async () => {
+    setIsTimerLoading(true);
+    await stopTimer();
+    setIsTimerLoading(false);
+    // Refresh tasks to get updated time_spent_minutes
+    if (defaultBoard?.uuid) {
+      dispatch(fetchTasksByBoard({ boardUuid: defaultBoard.uuid }));
+    }
+  }, [stopTimer, dispatch, defaultBoard?.uuid]);
 
   // Handle timer switch confirmation
   const handleTimerSwitchConfirm = useCallback(async () => {
     if (pendingTimerTaskUuid) {
-      // Stop current timer and start new one
-      await dispatch(stopTimer());
-      await dispatch(startTimer({ taskUuid: pendingTimerTaskUuid }));
+      setIsTimerLoading(true);
+      // Stop current timer
+      await stopTimer();
+      // Start new timer
+      const task = tasks.find(t => t.uuid === pendingTimerTaskUuid);
+      const prevSeconds = ((task?.time_spent_minutes || 0) * 60);
+      await startTimer(pendingTimerTaskUuid, task?.id || 0, task?.title || "", prevSeconds);
+      setIsTimerLoading(false);
       dispatch(closeTimerConfirmation());
     }
-  }, [dispatch, pendingTimerTaskUuid]);
+  }, [pendingTimerTaskUuid, tasks, stopTimer, startTimer, dispatch]);
 
   // Handle timer switch cancel
   const handleTimerSwitchCancel = useCallback(() => {
@@ -204,11 +229,14 @@ const TasksTab: React.FC<TasksTabProps> = ({ channelUuid }) => {
         </div>
 
         {/* Running timer indicator */}
-        {runningTimer && (
+        {timerIsRunning && (
           <div className="tasks-tab-running-timer">
             <span className="animate-pulse w-2 h-2 bg-green-500 rounded-full" />
             <span className="text-sm text-secondary-600 dark:text-secondary-400">
-              Timer running on: <strong>{runningTimer.task_title}</strong>
+              Timer running on: <strong>{timerTaskTitle}</strong>
+            </span>
+            <span className="text-sm font-mono text-primary-600 dark:text-primary-400 ml-2">
+              {formattedTime}
             </span>
           </div>
         )}
@@ -275,7 +303,8 @@ const TasksTab: React.FC<TasksTabProps> = ({ channelUuid }) => {
             <TaskItem
               key={task.uuid}
               task={task}
-              runningTimer={runningTimer}
+              timerTaskUuid={timerTaskUuid}
+              formattedTime={formattedTime}
               isTimerLoading={isTimerLoading}
               onStartTimer={handleStartTimer}
               onStopTimer={handleStopTimer}
@@ -288,7 +317,7 @@ const TasksTab: React.FC<TasksTabProps> = ({ channelUuid }) => {
       {/* Timer confirmation dialog */}
       <TimerConfirmationDialog
         isOpen={timerConfirmationOpen}
-        currentTaskTitle={runningTimer?.task_title || ""}
+        currentTaskTitle={timerTaskTitle || ""}
         newTaskTitle={pendingTask?.title || ""}
         onConfirm={handleTimerSwitchConfirm}
         onCancel={handleTimerSwitchCancel}
@@ -302,7 +331,8 @@ const TasksTab: React.FC<TasksTabProps> = ({ channelUuid }) => {
           isOpen={!!selectedTask}
           onClose={handleCloseTaskDetail}
           currentUser={currentUser}
-          runningTimer={runningTimer}
+          timerTaskUuid={timerTaskUuid}
+          formattedTime={formattedTime}
           isTimerLoading={isTimerLoading}
           onStartTimer={handleStartTimer}
           onStopTimer={handleStopTimer}

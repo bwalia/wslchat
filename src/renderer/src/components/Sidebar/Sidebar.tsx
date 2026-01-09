@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../../hooks/useAppDispatch';
 import { setCurrentChannel, markChannelAsRead } from '../../store/slices/channelSlice';
-import { openCreateChannel, openSettings, toggleSidebar } from '../../store/slices/uiSlice';
+import { openCreateChannel, openDirectMessage, openSettings, toggleSidebar } from '../../store/slices/uiSlice';
 import { logout } from '../../store/slices/authSlice';
 import { fetchPendingInvites, setInvitesPanelOpen } from '../../store/slices/inviteSlice';
 import type { Channel } from '../../types';
@@ -38,9 +38,52 @@ const Sidebar: React.FC = () => {
     dispatch(logout());
   };
 
+  // Get display name for a DM channel (shows other user's name)
+  const getDMDisplayName = (channel: Channel): string => {
+    // Check nested other_user object first
+    if (channel.other_user) {
+      const { first_name, last_name, username, email } = channel.other_user;
+      if (first_name && last_name) return `${first_name} ${last_name}`;
+      if (first_name) return first_name;
+      if (username) return username;
+      if (email) return email.split('@')[0];
+    }
+    // Check flat structure
+    if (channel.other_user_first_name || channel.other_user_last_name) {
+      const first = channel.other_user_first_name || '';
+      const last = channel.other_user_last_name || '';
+      if (first && last) return `${first} ${last}`;
+      return first || last;
+    }
+    if (channel.other_user_username) return channel.other_user_username;
+    if (channel.other_user_email) return channel.other_user_email.split('@')[0];
+    // Fallback to channel name
+    return channel.name;
+  };
+
+  // Get presence status for DM channel
+  const getDMPresenceStatus = (channel: Channel): string => {
+    if (channel.other_user?.status) return channel.other_user.status;
+    if (channel.other_user_status) return channel.other_user_status;
+    return 'offline';
+  };
+
+  // Get presence indicator color
+  const getPresenceColor = (status: string) => {
+    switch (status) {
+      case 'online': return 'bg-success-500';
+      case 'away': return 'bg-warning-500';
+      case 'dnd': return 'bg-error-500';
+      default: return 'bg-secondary-500';
+    }
+  };
+
   const ChannelItem: React.FC<{ channel: Channel }> = ({ channel }) => {
     const isActive = currentChannel?.uuid === channel.uuid;
     const hasUnread = (channel.unread_count || 0) > 0;
+    const isDM = channel.type === 'direct';
+    const displayName = isDM ? getDMDisplayName(channel) : channel.name;
+    const presenceStatus = isDM ? getDMPresenceStatus(channel) : null;
 
     return (
       <button
@@ -51,9 +94,12 @@ const Sidebar: React.FC = () => {
           hasUnread && !isActive && 'font-semibold text-white'
         )}
       >
-        <span className="mr-2 text-lg">
-          {channel.type === 'direct' ? (
-            <span className="inline-block w-2 h-2 rounded-full bg-success-500 mr-1" />
+        <span className="mr-2 text-lg flex items-center">
+          {isDM ? (
+            <span className={clsx(
+              'inline-block w-2 h-2 rounded-full mr-1',
+              getPresenceColor(presenceStatus || 'offline')
+            )} />
           ) : channel.type === 'private' ? (
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -62,7 +108,7 @@ const Sidebar: React.FC = () => {
             '#'
           )}
         </span>
-        <span className="truncate flex-1">{channel.name}</span>
+        <span className="truncate flex-1">{displayName}</span>
         {hasUnread && (
           <span className="unread-badge ml-2">
             {channel.unread_count! > 99 ? '99+' : channel.unread_count}
@@ -188,12 +234,34 @@ const Sidebar: React.FC = () => {
 
             {/* Direct Messages Section */}
             <div className="px-4 py-2 mt-4">
-              <span className="text-xs font-semibold uppercase text-secondary-500 tracking-wider">Direct Messages</span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase text-secondary-500 tracking-wider">Direct Messages</span>
+                <button
+                  onClick={() => dispatch(openDirectMessage())}
+                  className="p-1 rounded-lg hover:bg-secondary-800 text-secondary-400 hover:text-white transition-colors"
+                  title="New message"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+              </div>
             </div>
             <div className="space-y-0.5 px-2">
               {directMessages.map((channel) => (
                 <ChannelItem key={channel.uuid} channel={channel} />
               ))}
+              {directMessages.length === 0 && (
+                <button
+                  onClick={() => dispatch(openDirectMessage())}
+                  className="w-full text-left sidebar-item text-secondary-500 hover:text-secondary-300"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span className="text-sm">Start a conversation</span>
+                </button>
+              )}
             </div>
           </>
         )}

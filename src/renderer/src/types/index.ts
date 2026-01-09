@@ -9,6 +9,7 @@ export interface User {
   username?: string;
   avatar_url?: string;
   role: string;
+  is_owner?: boolean;
   status?: PresenceStatus;
   status_text?: string;
   status_emoji?: string;
@@ -37,6 +38,22 @@ export interface Channel {
   // Kanban project link
   linked_task_uuid?: string;
   linked_task_id?: number;
+  // DM specific fields - the other participant in a direct message
+  other_user?: {
+    uuid: string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    username?: string;
+    status?: PresenceStatus;
+  };
+  // Alternative flat structure from API
+  other_user_uuid?: string;
+  other_user_first_name?: string;
+  other_user_last_name?: string;
+  other_user_email?: string;
+  other_user_username?: string;
+  other_user_status?: PresenceStatus;
 }
 
 export interface ChannelMember {
@@ -330,6 +347,8 @@ export interface RunningTimer {
   project_name?: string;
   started_at: string;
   elapsed_seconds?: number;
+  previous_seconds?: number;
+  total_seconds?: number;
   duration_minutes?: number;
   description?: string;
   user_uuid?: string;

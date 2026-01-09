@@ -1,6 +1,5 @@
 import React from "react";
 import clsx from "clsx";
-import { useTimerTick } from "../../hooks/useTimerTick";
 
 interface TimerButtonProps {
   taskUuid: string;
@@ -8,8 +7,7 @@ interface TimerButtonProps {
   isLoading: boolean;
   onStart: (taskUuid: string) => void;
   onStop: () => void;
-  startedAt?: string;
-  elapsedSeconds?: number;
+  formattedTime?: string;
   size?: "default" | "large";
 }
 
@@ -19,16 +17,11 @@ const TimerButton: React.FC<TimerButtonProps> = ({
   isLoading,
   onStart,
   onStop,
-  startedAt,
-  elapsedSeconds,
+  formattedTime = "0:00",
   size = "default",
 }) => {
-  const { formattedTime } = useTimerTick(
-    isRunning ? startedAt || null : null,
-    isRunning ? elapsedSeconds : undefined
-  );
-
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering parent click handlers
     if (isLoading) return;
 
     if (isRunning) {

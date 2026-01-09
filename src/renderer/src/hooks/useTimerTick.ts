@@ -3,17 +3,23 @@ import { useState, useEffect, useCallback, useRef } from "react";
 /**
  * Hook that calculates elapsed time from a start timestamp
  * Updates every second when a timer is running
+ * Supports accumulated time from previous sessions (like Upwork tracker)
  *
  * @param startedAt - ISO timestamp string when timer started (should be UTC with 'Z' suffix), or null if not running
- * @param initialElapsedSeconds - Optional server-provided elapsed seconds for initial sync
- * @returns Object with elapsed seconds and formatted time string
+ * @param initialElapsedSeconds - Optional server-provided current session elapsed seconds for initial sync
+ * @param previousSeconds - Optional accumulated time from previous sessions (in seconds)
+ * @returns Object with elapsed seconds, total seconds (including previous), and formatted time strings
  */
-export const useTimerTick = (startedAt: string | null, initialElapsedSeconds?: number) => {
-  const [elapsed, setElapsed] = useState(0);
+export const useTimerTick = (
+  startedAt: string | null,
+  initialElapsedSeconds?: number,
+  previousSeconds: number = 0
+) => {
+  const [sessionElapsed, setSessionElapsed] = useState(0);
   const startTimeRef = useRef<number | null>(null);
 
-  // Calculate elapsed time in seconds from the start timestamp
-  const calculateElapsed = useCallback(() => {
+  // Calculate elapsed time in seconds for current session
+  const calculateSessionElapsed = useCallback(() => {
     if (!startedAt) return 0;
 
     // If we have a start time reference (synced with server), use it
@@ -29,7 +35,7 @@ export const useTimerTick = (startedAt: string | null, initialElapsedSeconds?: n
 
   useEffect(() => {
     if (!startedAt) {
-      setElapsed(0);
+      setSessionElapsed(0);
       startTimeRef.current = null;
       return;
     }
@@ -38,21 +44,24 @@ export const useTimerTick = (startedAt: string | null, initialElapsedSeconds?: n
     // This helps avoid timezone issues
     if (initialElapsedSeconds !== undefined && initialElapsedSeconds >= 0) {
       // Calculate what the start time should be based on server's elapsed seconds
-      startTimeRef.current = Date.now() - (initialElapsedSeconds * 1000);
-      setElapsed(initialElapsedSeconds);
+      startTimeRef.current = Date.now() - initialElapsedSeconds * 1000;
+      setSessionElapsed(initialElapsedSeconds);
     } else {
       // Fall back to parsing the timestamp
       startTimeRef.current = null;
-      setElapsed(calculateElapsed());
+      setSessionElapsed(calculateSessionElapsed());
     }
 
     // Update every second
     const interval = setInterval(() => {
-      setElapsed(calculateElapsed());
+      setSessionElapsed(calculateSessionElapsed());
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [startedAt, initialElapsedSeconds, calculateElapsed]);
+  }, [startedAt, initialElapsedSeconds, calculateSessionElapsed]);
+
+  // Total elapsed = previous sessions + current session
+  const totalElapsed = previousSeconds + sessionElapsed;
 
   // Format elapsed time as HH:MM:SS or MM:SS
   const formatElapsed = useCallback((seconds: number): string => {
@@ -67,11 +76,17 @@ export const useTimerTick = (startedAt: string | null, initialElapsedSeconds?: n
   }, []);
 
   return {
-    elapsed,
-    formattedTime: formatElapsed(elapsed),
-    hours: Math.floor(elapsed / 3600),
-    minutes: Math.floor((elapsed % 3600) / 60),
-    seconds: elapsed % 60,
+    // Current session elapsed
+    sessionElapsed,
+    sessionFormattedTime: formatElapsed(sessionElapsed),
+    // Total elapsed (previous + current session) - this is what we display
+    elapsed: totalElapsed,
+    formattedTime: formatElapsed(totalElapsed),
+    hours: Math.floor(totalElapsed / 3600),
+    minutes: Math.floor((totalElapsed % 3600) / 60),
+    seconds: totalElapsed % 60,
+    // Previous sessions total
+    previousSeconds,
   };
 };
 
