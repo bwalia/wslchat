@@ -145,7 +145,10 @@ const register = (ipcMain, store) => {
       }
 
       console.log('[Kanban] Timer started for task:', taskUuid);
-      return { success: true, data: response.data };
+      // Unwrap the Lapis API response to simplify frontend access
+      // Lapis returns { success: true, data: { ... } }, we flatten it
+      const apiData = response.data?.data || response.data;
+      return { success: true, data: apiData };
     } catch (error) {
       console.error('[Kanban] Start timer error:', error.message);
       if (error.response) {
@@ -157,8 +160,13 @@ const register = (ipcMain, store) => {
 
   /**
    * Stop running timer
+   * @param {Object} params
+   * @param {string} [params.description] - Optional description
+   * @param {number} [params.accumulated_seconds] - Client-tracked seconds (more accurate)
    */
-  ipcMain.handle('kanban:timer-stop', async (_, { description } = {}) => {
+  ipcMain.handle('kanban:timer-stop', async (_, params = {}) => {
+    const { description, accumulated_seconds } = params;
+
     const authCheck = validateAuth();
     if (!authCheck.isValid) {
       return { success: false, error: authCheck.error };
@@ -166,9 +174,17 @@ const register = (ipcMain, store) => {
 
     try {
       const api = createApiClient(store);
-      const response = await api.post('/api/v2/kanban/timer/stop', {
-        description: description || undefined,
-      });
+      const requestData = {};
+      if (description) {
+        requestData.description = description;
+      }
+      if (accumulated_seconds !== undefined && accumulated_seconds !== null) {
+        requestData.accumulated_seconds = accumulated_seconds;
+      }
+
+      console.log('[Kanban] Stopping timer with:', JSON.stringify(requestData));
+
+      const response = await api.post('/api/v2/kanban/timer/stop', requestData);
 
       if (response.status >= 400) {
         return {
@@ -178,7 +194,9 @@ const register = (ipcMain, store) => {
       }
 
       console.log('[Kanban] Timer stopped');
-      return { success: true, data: response.data };
+      // Unwrap the Lapis API response to simplify frontend access
+      const apiData = response.data?.data || response.data;
+      return { success: true, data: apiData };
     } catch (error) {
       console.error('[Kanban] Stop timer error:', error.message);
       return handleNetworkError(error, 'Failed to stop timer');
@@ -205,7 +223,9 @@ const register = (ipcMain, store) => {
         };
       }
 
-      return { success: true, data: response.data };
+      // Unwrap the Lapis API response to simplify frontend access
+      const apiData = response.data?.data || response.data;
+      return { success: true, data: apiData };
     } catch (error) {
       console.error('[Kanban] Get current timer error:', error.message);
       return handleNetworkError(error, 'Failed to fetch timer');

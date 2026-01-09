@@ -64,6 +64,9 @@ const validInvokeChannels = [
   'users:update-profile',
   'users:search',
 
+  // Chat
+  'chat:search-users',
+
   // Presence
   'presence:update',
   'presence:get',

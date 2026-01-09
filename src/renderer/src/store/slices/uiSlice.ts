@@ -12,6 +12,7 @@ interface UIState {
   searchQuery: string;
   settingsOpen: boolean;
   createChannelOpen: boolean;
+  directMessageOpen: boolean;
   inviteUserOpen: boolean;
   profileOpen: boolean;
   membersDrawerOpen: boolean;
@@ -33,6 +34,7 @@ const initialState: UIState = {
   searchQuery: '',
   settingsOpen: false,
   createChannelOpen: false,
+  directMessageOpen: false,
   inviteUserOpen: false,
   profileOpen: false,
   membersDrawerOpen: false,
@@ -136,6 +138,12 @@ const uiSlice = createSlice({
     closeCreateChannel: (state) => {
       state.createChannelOpen = false;
     },
+    openDirectMessage: (state) => {
+      state.directMessageOpen = true;
+    },
+    closeDirectMessage: (state) => {
+      state.directMessageOpen = false;
+    },
     openInviteUser: (state) => {
       state.inviteUserOpen = true;
     },
@@ -214,6 +222,8 @@ export const {
   closeSettings,
   openCreateChannel,
   closeCreateChannel,
+  openDirectMessage,
+  closeDirectMessage,
   openInviteUser,
   closeInviteUser,
   openProfile,

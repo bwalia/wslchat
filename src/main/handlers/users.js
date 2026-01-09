@@ -110,7 +110,7 @@ const register = (ipcMain, store) => {
   });
 
   /**
-   * Search users
+   * Search users (namespace-scoped - requires users.read permission)
    */
   ipcMain.handle('users:search', async (_, { query, params = {} }) => {
     const authCheck = validateAuth();
@@ -139,6 +139,64 @@ const register = (ipcMain, store) => {
     } catch (error) {
       console.error('[Users] Search error:', error.message);
       return handleNetworkError(error, 'Search failed');
+    }
+  });
+
+  /**
+   * Search users for chat/DM with chat activity status
+   * Returns all users with is_chat_active flag indicating if they're using chat
+   * Used for Direct Message user search
+   */
+  ipcMain.handle('chat:search-users', async (_, { query, params = {} }) => {
+    const authCheck = validateAuth();
+    if (!authCheck.isValid) {
+      return { success: false, error: authCheck.error };
+    }
+
+    if (!query || typeof query !== 'string') {
+      return { success: false, error: 'Search query is required' };
+    }
+
+    const trimmedQuery = query.trim();
+    if (trimmedQuery.length < 2) {
+      return { success: false, error: 'Search query must be at least 2 characters' };
+    }
+
+    try {
+      const api = createApiClient(store);
+      const searchParams = {
+        q: trimmedQuery,
+        limit: params.limit || 20,
+        ...params,
+      };
+
+      // Use the new search endpoint that includes chat activity status
+      const response = await api.get('/api/chat/users/search', {
+        params: searchParams,
+      });
+
+      if (response.status >= 400) {
+        return {
+          success: false,
+          error: response.data?.error || 'User search failed',
+        };
+      }
+
+      // Normalize response structure
+      const users = Array.isArray(response.data)
+        ? response.data
+        : response.data?.data || response.data?.users || [];
+
+      return {
+        success: true,
+        data: {
+          users,
+          total: response.data?.total || users.length,
+        },
+      };
+    } catch (error) {
+      console.error('[Chat] User search error:', error.message);
+      return handleNetworkError(error, 'User search failed');
     }
   });
 };

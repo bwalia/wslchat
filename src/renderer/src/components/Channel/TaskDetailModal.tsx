@@ -1,6 +1,6 @@
 import React from "react";
 import clsx from "clsx";
-import type { KanbanTask, TaskStatus, TaskPriority, RunningTimer, User } from "../../types";
+import type { KanbanTask, TaskStatus, TaskPriority, User } from "../../types";
 import { formatMinutes } from "../../hooks/useTimerTick";
 import TimerButton from "./TimerButton";
 
@@ -9,7 +9,8 @@ interface TaskDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentUser: User | null;
-  runningTimer: RunningTimer | null;
+  timerTaskUuid: string | null;
+  formattedTime: string;
   isTimerLoading: boolean;
   onStartTimer: (taskUuid: string) => void;
   onStopTimer: () => void;
@@ -36,7 +37,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   isOpen,
   onClose,
   currentUser,
-  runningTimer,
+  timerTaskUuid,
+  formattedTime,
   isTimerLoading,
   onStartTimer,
   onStopTimer,
@@ -45,7 +47,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
   const status = statusConfig[task.status] || statusConfig.backlog;
   const priority = priorityConfig[task.priority] || priorityConfig.medium;
-  const isTimerRunningOnThisTask = runningTimer?.task_uuid === task.uuid;
+  const isTimerRunningOnThisTask = timerTaskUuid === task.uuid;
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "done";
 
   // Check if current user is assigned to this task
@@ -138,11 +140,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             </div>
             <div className="task-detail-field">
               <label className="task-detail-label">Time Spent</label>
-              <span className="task-detail-time">
+              <span className={clsx("task-detail-time", isTimerRunningOnThisTask && "task-detail-time-live")}>
                 <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                {formatMinutes(task.time_spent_minutes || 0)}
+                {/* Show live time when timer is running on this task, otherwise show stored time */}
+                {isTimerRunningOnThisTask ? formattedTime : formatMinutes(task.time_spent_minutes || 0)}
                 {task.estimated_minutes && (
                   <span className="text-secondary-400 ml-1">
                     / {formatMinutes(task.estimated_minutes)}
@@ -209,8 +212,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   isLoading={isTimerLoading}
                   onStart={onStartTimer}
                   onStop={onStopTimer}
-                  startedAt={isTimerRunningOnThisTask ? runningTimer?.started_at : undefined}
-                  elapsedSeconds={isTimerRunningOnThisTask ? runningTimer?.elapsed_seconds : undefined}
+                  formattedTime={isTimerRunningOnThisTask ? formattedTime : "0:00"}
                   size="large"
                 />
               </div>

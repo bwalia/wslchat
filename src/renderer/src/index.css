@@ -1366,6 +1366,10 @@
            text-sm text-secondary-700 dark:text-secondary-300;
   }
 
+  .task-detail-time-live {
+    @apply text-green-600 dark:text-green-400 font-mono font-medium;
+  }
+
   .task-detail-section {
     @apply space-y-2;
   }
@@ -1445,5 +1449,173 @@
            px-6 py-3
            border-t border-secondary-200 dark:border-secondary-700
            bg-secondary-50 dark:bg-secondary-900;
+  }
+
+  /* ----------------------------------------
+   * CHANNEL DRAWER OVERLAY
+   * ---------------------------------------- */
+  .channel-drawer-overlay {
+    @apply fixed inset-0 z-40
+           bg-black/30 backdrop-blur-sm
+           animate-fade-in;
+  }
+
+  .channel-drawer {
+    @apply absolute top-0 right-0 h-full w-96
+           bg-white dark:bg-secondary-900
+           shadow-xl;
+    animation: slideInFromRight 0.3s ease-out;
+  }
+
+  @keyframes slideInFromRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* ----------------------------------------
+   * PINNED MESSAGES PANEL
+   * ---------------------------------------- */
+  .pinned-panel {
+    @apply flex flex-col h-full;
+  }
+
+  .pinned-panel-header {
+    @apply flex items-center justify-between
+           px-4 py-4
+           border-b border-secondary-200 dark:border-secondary-700;
+  }
+
+  .pinned-panel-content {
+    @apply flex-1 overflow-y-auto;
+  }
+
+  .pinned-panel-empty {
+    @apply flex flex-col items-center justify-center
+           h-full p-8;
+  }
+
+  .pinned-panel-list {
+    @apply p-4 space-y-3;
+  }
+
+  .pinned-message {
+    @apply p-4 rounded-lg
+           bg-secondary-50 dark:bg-secondary-800
+           border border-secondary-200 dark:border-secondary-700;
+  }
+
+  .pinned-message-header {
+    @apply flex items-start gap-3 mb-2;
+  }
+
+  .pinned-message-avatar {
+    @apply w-8 h-8 rounded-full
+           text-xs font-medium
+           flex items-center justify-center
+           flex-shrink-0;
+  }
+
+  .pinned-message-meta {
+    @apply flex-1 min-w-0;
+  }
+
+  .pinned-message-author {
+    @apply block text-sm font-medium text-secondary-900 dark:text-white
+           truncate;
+  }
+
+  .pinned-message-time {
+    @apply block text-xs text-secondary-500 dark:text-secondary-400;
+  }
+
+  .pinned-message-unpin {
+    @apply p-1.5 rounded-lg
+           text-secondary-400 hover:text-error-500
+           hover:bg-error-50 dark:hover:bg-error-900/20
+           transition-colors;
+  }
+
+  .pinned-message-content {
+    @apply text-sm text-secondary-700 dark:text-secondary-300
+           break-words;
+  }
+
+  /* ----------------------------------------
+   * SEARCH PANEL
+   * ---------------------------------------- */
+  .search-panel {
+    @apply flex flex-col h-full;
+  }
+
+  .search-panel-header {
+    @apply flex items-center justify-between
+           px-4 py-4
+           border-b border-secondary-200 dark:border-secondary-700;
+  }
+
+  .search-panel-input-container {
+    @apply px-4 py-3
+           border-b border-secondary-200 dark:border-secondary-700;
+  }
+
+  .search-panel-content {
+    @apply flex-1 overflow-y-auto;
+  }
+
+  .search-panel-loading {
+    @apply flex flex-col items-center justify-center
+           h-64;
+  }
+
+  .search-panel-empty {
+    @apply flex flex-col items-center justify-center
+           h-full p-8;
+  }
+
+  .search-panel-list {
+    @apply p-4 space-y-3;
+  }
+
+  .search-result-item {
+    @apply p-4 rounded-lg
+           bg-secondary-50 dark:bg-secondary-800
+           border border-secondary-200 dark:border-secondary-700
+           hover:bg-secondary-100 dark:hover:bg-secondary-700
+           transition-colors cursor-pointer;
+  }
+
+  .search-result-header {
+    @apply flex items-start gap-3 mb-2;
+  }
+
+  .search-result-avatar {
+    @apply w-8 h-8 rounded-full
+           text-xs font-medium
+           flex items-center justify-center
+           flex-shrink-0;
+  }
+
+  .search-result-meta {
+    @apply flex-1 min-w-0;
+  }
+
+  .search-result-author {
+    @apply block text-sm font-medium text-secondary-900 dark:text-white
+           truncate;
+  }
+
+  .search-result-time {
+    @apply block text-xs text-secondary-500 dark:text-secondary-400;
+  }
+
+  .search-result-content {
+    @apply text-sm text-secondary-700 dark:text-secondary-300
+           break-words line-clamp-3;
   }
 }

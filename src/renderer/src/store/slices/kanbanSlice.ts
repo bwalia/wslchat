@@ -89,20 +89,18 @@ export const fetchRunningTimer = createAsyncThunk<RunningTimer | null, void>(
   "kanban/fetchRunningTimer",
   async (_, { rejectWithValue }) => {
     try {
-      const result = await window.electronAPI.invoke<{ data: RunningTimer | { running: false } }>(
-        "kanban:timer-current"
-      );
+      // IPC handler unwraps the API response, so result.data is the timer object directly
+      const result = await window.electronAPI.invoke("kanban:timer-current");
       if (!result.success) {
         return rejectWithValue(result.error || "Failed to fetch timer");
       }
-      // API returns { running: false } if no timer, or the timer object with running: true
-      const data = result.data?.data;
+      const data = result.data as (RunningTimer | { running: false });
       if (data && "running" in data && data.running === true) {
         return data as RunningTimer;
       }
       return null;
-    } catch (error: any) {
-      return rejectWithValue(error.message || "Failed to fetch timer");
+    } catch (error: unknown) {
+      return rejectWithValue((error as Error).message || "Failed to fetch timer");
     }
   }
 );
@@ -118,7 +116,7 @@ export const startTimer = createAsyncThunk<
     console.log("[Kanban] Starting timer for task:", taskUuid);
 
     // First start the timer
-    const result = await window.electronAPI.invoke<{ data: unknown }>(
+    const result = await window.electronAPI.invoke(
       "kanban:timer-start",
       { taskUuid, description }
     );
@@ -130,9 +128,8 @@ export const startTimer = createAsyncThunk<
     }
 
     // Then fetch the running timer to get the full details (task_uuid, task_title, etc.)
-    const timerResult = await window.electronAPI.invoke<{ data: RunningTimer | { running: false } }>(
-      "kanban:timer-current"
-    );
+    // IPC handler now unwraps the API response
+    const timerResult = await window.electronAPI.invoke("kanban:timer-current");
     console.log("[Kanban] Timer current result:", timerResult);
 
     if (!timerResult.success) {
@@ -140,7 +137,7 @@ export const startTimer = createAsyncThunk<
       return rejectWithValue(timerResult.error || "Failed to fetch timer");
     }
 
-    const data = timerResult.data?.data;
+    const data = timerResult.data as (RunningTimer | { running: false });
     console.log("[Kanban] Timer data extracted:", data);
 
     if (data && "running" in data && data.running === true) {
@@ -150,18 +147,18 @@ export const startTimer = createAsyncThunk<
 
     // Fallback: construct a minimal RunningTimer from start response
     console.log("[Kanban] Using fallback timer construction");
-    const entry = result.data?.data || result.data;
+    const entry = result.data as Record<string, unknown>;
     return {
-      uuid: (entry as any).uuid,
-      task_id: (entry as any).task_id,
+      uuid: entry.uuid as string,
+      task_id: entry.task_id as number,
       task_uuid: taskUuid,
       task_title: "",
-      started_at: (entry as any).started_at,
+      started_at: entry.started_at as string,
       running: true,
     } as RunningTimer;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Kanban] Start timer error:", error);
-    return rejectWithValue(error.message || "Failed to start timer");
+    return rejectWithValue((error as Error).message || "Failed to start timer");
   }
 });
 
@@ -172,16 +169,17 @@ export const stopTimer = createAsyncThunk<TimeEntry, { description?: string } | 
   "kanban/stopTimer",
   async (params, { rejectWithValue }) => {
     try {
-      const result = await window.electronAPI.invoke<{ data: TimeEntry }>(
+      // IPC handler now unwraps the API response
+      const result = await window.electronAPI.invoke(
         "kanban:timer-stop",
         params || {}
       );
       if (!result.success) {
         return rejectWithValue(result.error || "Failed to stop timer");
       }
-      return result.data?.data || result.data as unknown as TimeEntry;
-    } catch (error: any) {
-      return rejectWithValue(error.message || "Failed to stop timer");
+      return result.data as TimeEntry;
+    } catch (error: unknown) {
+      return rejectWithValue((error as Error).message || "Failed to stop timer");
     }
   }
 );

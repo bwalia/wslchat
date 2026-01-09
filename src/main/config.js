@@ -6,7 +6,9 @@
 const path = require('path');
 
 // Load environment variables from project root .env file
-require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+// Use .env.production in production, otherwise .env
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
+require('dotenv').config({ path: path.join(__dirname, '../../', envFile) });
 
 const config = {
   // API Configuration

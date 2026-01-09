@@ -73,6 +73,10 @@ export const logout = createAsyncThunk(
       dispatch(resetInviteState());
       dispatch(resetKanbanState());
 
+      // Cleanup timer service
+      const { timerService } = await import("../../services/timerService");
+      timerService.cleanup();
+
       // Purge persisted storage to ensure clean state for next user
       const { persistor } = await import("../index");
       await persistor.purge();

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../hooks/useAppDispatch';
 import { fetchChannels } from '../store/slices/channelSlice';
+import { closeDirectMessage } from '../store/slices/uiSlice';
 
 // Components
 import Sidebar from './Sidebar/Sidebar';
@@ -8,13 +9,14 @@ import ChannelView from './Channel/ChannelView';
 import ThreadPanel from './Thread/ThreadPanel';
 import WelcomeView from './Channel/WelcomeView';
 import CreateChannelModal from './Channel/CreateChannelModal';
+import DirectMessageModal from './Channel/DirectMessageModal';
 import InviteUserModal from './Channel/InviteUserModal';
 import InvitationsPanel from './Invitations/InvitationsPanel';
 import SettingsModal from './Settings/SettingsModal';
 
 const MainLayout: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { threadPanelOpen, createChannelOpen, inviteUserOpen, settingsOpen } = useAppSelector((state) => state.ui);
+  const { threadPanelOpen, createChannelOpen, directMessageOpen, inviteUserOpen, settingsOpen } = useAppSelector((state) => state.ui);
   const { invitesPanelOpen } = useAppSelector((state) => state.invite);
   const { currentChannel, channels } = useAppSelector((state) => state.channel);
 
@@ -68,6 +70,12 @@ const MainLayout: React.FC = () => {
 
       {/* Modals */}
       {createChannelOpen && <CreateChannelModal />}
+      {directMessageOpen && (
+        <DirectMessageModal
+          isOpen={directMessageOpen}
+          onClose={() => dispatch(closeDirectMessage())}
+        />
+      )}
       {inviteUserOpen && currentChannel && (
         <InviteUserModal
           channelUuid={currentChannel.uuid}

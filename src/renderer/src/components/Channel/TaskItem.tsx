@@ -1,12 +1,13 @@
 import React from "react";
 import clsx from "clsx";
-import type { KanbanTask, TaskStatus, TaskPriority, RunningTimer } from "../../types";
+import type { KanbanTask, TaskStatus, TaskPriority } from "../../types";
 import { formatMinutes } from "../../hooks/useTimerTick";
 import TimerButton from "./TimerButton";
 
 interface TaskItemProps {
   task: KanbanTask;
-  runningTimer: RunningTimer | null;
+  timerTaskUuid: string | null;
+  formattedTime: string;
   isTimerLoading: boolean;
   onStartTimer: (taskUuid: string) => void;
   onStopTimer: () => void;
@@ -31,7 +32,8 @@ const priorityConfig: Record<TaskPriority, { label: string; className: string; i
 
 const TaskItem: React.FC<TaskItemProps> = ({
   task,
-  runningTimer,
+  timerTaskUuid,
+  formattedTime,
   isTimerLoading,
   onStartTimer,
   onStopTimer,
@@ -39,7 +41,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
 }) => {
   const status = statusConfig[task.status] || statusConfig.backlog;
   const priority = priorityConfig[task.priority] || priorityConfig.medium;
-  const isTimerRunningOnThisTask = runningTimer?.task_uuid === task.uuid;
+  const isTimerRunningOnThisTask = timerTaskUuid === task.uuid;
 
   // Check if task is overdue
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "done";
@@ -148,8 +150,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
           isLoading={isTimerLoading}
           onStart={onStartTimer}
           onStop={onStopTimer}
-          startedAt={isTimerRunningOnThisTask ? runningTimer?.started_at : undefined}
-          elapsedSeconds={isTimerRunningOnThisTask ? runningTimer?.elapsed_seconds : undefined}
+          formattedTime={isTimerRunningOnThisTask ? formattedTime : "0:00"}
         />
       </div>
     </div>

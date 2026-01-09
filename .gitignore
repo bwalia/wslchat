@@ -12,6 +12,7 @@ src/renderer/build/
 .env
 .env.local
 .env.*.local
+.env.*
 
 # IDE
 .idea/
