@@ -10,6 +10,20 @@ const { app, BrowserWindow, ipcMain, shell, nativeTheme, Tray, Menu } = require(
 const path = require('path');
 const Store = require('electron-store');
 
+// Custom protocol for OAuth callbacks
+const PROTOCOL_NAME = 'wsl-chat';
+
+// Register custom protocol as default handler (must be done before app is ready)
+if (process.defaultApp) {
+  // Development mode - need to register with path to electron
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient(PROTOCOL_NAME, process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  // Production mode
+  app.setAsDefaultProtocolClient(PROTOCOL_NAME);
+}
+
 // Import handlers
 const authHandlers = require('./handlers/auth');
 const channelHandlers = require('./handlers/channels');
@@ -40,6 +54,53 @@ let tray = null;
 let socketService = null;
 let notificationService = null;
 let isQuitting = false;
+let pendingDeepLink = null; // Store deep link if app isn't ready yet
+
+/**
+ * Handle OAuth deep link callback
+ * URL format: wsl-chat://auth/callback?token=xxx
+ */
+const handleDeepLink = (url) => {
+  console.log('[OAuth] Received deep link:', url);
+
+  if (!url || !url.startsWith(`${PROTOCOL_NAME}://`)) {
+    console.log('[OAuth] Invalid deep link URL');
+    return;
+  }
+
+  try {
+    // Parse the URL
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname || urlObj.host; // Handle both wsl-chat://auth/callback and wsl-chat:auth/callback
+
+    console.log('[OAuth] Pathname:', pathname, 'Host:', urlObj.host);
+
+    // Check if this is an auth callback
+    if (pathname === '/auth/callback' || pathname === 'auth/callback' || urlObj.host === 'auth') {
+      const token = urlObj.searchParams.get('token');
+
+      if (token) {
+        console.log('[OAuth] Token received, processing...');
+
+        // If window is ready, send the token to the renderer
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.show();
+          mainWindow.focus();
+          mainWindow.webContents.send('oauth:callback', { token });
+          console.log('[OAuth] Sent token to renderer');
+        } else {
+          // Store for later if window isn't ready
+          pendingDeepLink = { token };
+          console.log('[OAuth] Window not ready, stored token for later');
+        }
+      } else {
+        console.error('[OAuth] No token in callback URL');
+      }
+    }
+  } catch (error) {
+    console.error('[OAuth] Error parsing deep link:', error);
+  }
+};
 
 /**
  * Create the main application window
@@ -80,6 +141,18 @@ const createWindow = () => {
   mainWindow.once('ready-to-show', () => {
     if (!store.get('startMinimized')) {
       mainWindow.show();
+    }
+
+    // Process any pending deep link (from startup)
+    if (pendingDeepLink) {
+      console.log('[OAuth] Processing pending deep link');
+      if (typeof pendingDeepLink === 'string') {
+        handleDeepLink(pendingDeepLink);
+      } else if (pendingDeepLink.token) {
+        // Already parsed token
+        mainWindow.webContents.send('oauth:callback', pendingDeepLink);
+      }
+      pendingDeepLink = null;
     }
   });
 
@@ -364,12 +437,22 @@ app.on('certificate-error', (event, webContents, url, error, certificate, callba
   }
 });
 
-// Prevent multiple instances
+// Prevent multiple instances and handle deep links
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
+  // Handle deep link when app is already running (Windows/Linux)
+  app.on('second-instance', (event, argv) => {
+    console.log('[App] Second instance detected, argv:', argv);
+
+    // Look for deep link in argv (Windows/Linux passes URL as argument)
+    const deepLinkUrl = argv.find(arg => arg.startsWith(`${PROTOCOL_NAME}://`));
+    if (deepLinkUrl) {
+      handleDeepLink(deepLinkUrl);
+    }
+
+    // Focus the main window
     if (mainWindow) {
       if (mainWindow.isMinimized()) {
         mainWindow.restore();
@@ -378,4 +461,19 @@ if (!gotTheLock) {
       mainWindow.focus();
     }
   });
+
+  // Handle deep link on macOS
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    console.log('[App] open-url event:', url);
+    handleDeepLink(url);
+  });
+}
+
+// Also check for deep link in process.argv on startup (Windows/Linux)
+const startupDeepLink = process.argv.find(arg => arg.startsWith(`${PROTOCOL_NAME}://`));
+if (startupDeepLink) {
+  console.log('[App] Found deep link in startup args:', startupDeepLink);
+  // Will be processed after app is ready
+  pendingDeepLink = startupDeepLink;
 }

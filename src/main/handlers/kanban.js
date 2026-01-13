@@ -27,8 +27,11 @@ const register = (ipcMain, store) => {
    * Get project linked to a channel
    */
   ipcMain.handle('kanban:get-project-by-channel', async (_, channelUuid) => {
+    console.log('[Kanban] Fetching project for channel:', channelUuid);
+
     const authCheck = validateAuth();
     if (!authCheck.isValid) {
+      console.log('[Kanban] Auth check failed:', authCheck.error);
       return { success: false, error: authCheck.error };
     }
 
@@ -38,6 +41,8 @@ const register = (ipcMain, store) => {
 
     try {
       const api = createApiClient(store);
+      console.log('[Kanban] Making API request to /api/v2/kanban/projects with chat_channel_uuid:', channelUuid);
+
       // Query projects filtering by chat_channel_uuid
       const response = await withRetry(() =>
         api.get('/api/v2/kanban/projects', {
@@ -45,21 +50,30 @@ const register = (ipcMain, store) => {
         })
       );
 
+      console.log('[Kanban] API response status:', response.status);
+      console.log('[Kanban] API response data:', JSON.stringify(response.data, null, 2));
+
       if (response.status >= 400) {
+        console.error('[Kanban] API error:', response.status, response.data?.error);
         return {
           success: false,
-          error: response.data?.error || 'Failed to fetch project',
+          error: response.data?.error || response.data?.message || 'Failed to fetch project',
         };
       }
 
       // Return the first project linked to this channel (should be only one)
       const projects = response.data?.data || [];
+      console.log('[Kanban] Found', projects.length, 'projects for channel');
+
       return {
         success: true,
         data: projects.length > 0 ? projects[0] : null,
       };
     } catch (error) {
       console.error('[Kanban] Get project by channel error:', error.message);
+      if (error.response) {
+        console.error('[Kanban] Response data:', JSON.stringify(error.response.data));
+      }
       return handleNetworkError(error, 'Failed to fetch project');
     }
   });

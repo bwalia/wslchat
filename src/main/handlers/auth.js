@@ -45,7 +45,7 @@ const register = (ipcMain, store) => {
         return { success: false, error: errorMessage };
       }
 
-      const { user, token } = response.data;
+      const { user, token, current_namespace, namespaces } = response.data;
 
       if (!user || !token) {
         console.error('[Auth] Invalid response: missing user or token');
@@ -63,6 +63,10 @@ const register = (ipcMain, store) => {
         ...user,
         uuid: user.uuid || user.id, // Lapis returns 'id', normalize to 'uuid'
         name: displayName,
+        // Add namespace info to user object for API requests
+        namespace: current_namespace || null,
+        namespace_id: current_namespace?.id || null,
+        namespace_uuid: current_namespace?.uuid || null,
       };
 
       // Validate user has required fields
@@ -76,7 +80,11 @@ const register = (ipcMain, store) => {
         user: normalizedUser,
         token,
         loggedInAt: new Date().toISOString(),
+        namespaces: namespaces || [],
+        currentNamespace: current_namespace || null,
       });
+
+      console.log('[Auth] Namespace context:', current_namespace?.slug || 'none');
 
       console.log('[Auth] Login successful:', normalizedUser.email || normalizedUser.name || normalizedUser.uuid);
       return { success: true, user: normalizedUser, token };
@@ -148,7 +156,7 @@ const register = (ipcMain, store) => {
         };
       }
 
-      const { user, token: newToken } = response.data;
+      const { user, token: newToken, current_namespace, namespaces } = response.data;
 
       if (!user) {
         console.error('[Auth] Invalid validation response: missing user');
@@ -167,6 +175,10 @@ const register = (ipcMain, store) => {
         ...user,
         uuid: user.uuid || user.id,
         name: displayName,
+        // Add namespace info to user object for API requests
+        namespace: current_namespace || auth.currentNamespace || null,
+        namespace_id: current_namespace?.id || auth.currentNamespace?.id || null,
+        namespace_uuid: current_namespace?.uuid || auth.currentNamespace?.uuid || null,
       };
 
       // Update stored auth data with fresh data
@@ -175,6 +187,8 @@ const register = (ipcMain, store) => {
         token: newToken || auth.token,
         loggedInAt: auth.loggedInAt,
         validatedAt: new Date().toISOString(),
+        namespaces: namespaces || auth.namespaces || [],
+        currentNamespace: current_namespace || auth.currentNamespace || null,
       };
 
       store.set('auth', updatedAuth);
@@ -225,12 +239,14 @@ const register = (ipcMain, store) => {
 
   /**
    * Get Google OAuth URL for browser-based authentication
+   * Includes 'from=desktop' parameter so backend redirects to custom protocol
    */
   ipcMain.handle('auth:google-login', async () => {
     const { API_URL } = require('../services/api');
+    // Add from=desktop so backend knows to redirect to wsl-chat:// protocol
     return {
       success: true,
-      url: `${API_URL}/auth/google`,
+      url: `${API_URL}/auth/google?from=desktop`,
     };
   });
 
@@ -258,16 +274,27 @@ const register = (ipcMain, store) => {
         };
       }
 
-      const { user } = response.data;
+      const { user, current_namespace, namespaces } = response.data;
 
       if (!user) {
         return { success: false, error: 'Invalid validation response' };
       }
 
       // Normalize user data - Lapis returns 'id' but we use 'uuid' internally
+      // Also build display name from first_name/last_name if name not present
+      const displayName = user.name ||
+        (user.first_name && user.last_name
+          ? `${user.first_name} ${user.last_name}`
+          : user.username || user.email || 'User');
+
       const normalizedUser = {
         ...user,
         uuid: user.uuid || user.id,
+        name: displayName,
+        // Add namespace info to user object for API requests
+        namespace: current_namespace || null,
+        namespace_id: current_namespace?.id || null,
+        namespace_uuid: current_namespace?.uuid || null,
       };
 
       // Store auth data
@@ -276,9 +303,12 @@ const register = (ipcMain, store) => {
         token,
         loggedInAt: new Date().toISOString(),
         authMethod: 'oauth',
+        namespaces: namespaces || [],
+        currentNamespace: current_namespace || null,
       });
 
       console.log('[Auth] OAuth callback handled successfully:', normalizedUser.email || normalizedUser.uuid);
+      console.log('[Auth] Namespace context:', current_namespace?.slug || 'none');
       return { success: true, user: normalizedUser, token };
     } catch (error) {
       console.error('[Auth] OAuth callback error:', error.message);

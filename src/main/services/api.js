@@ -63,6 +63,21 @@ const createApiClient = (store, options = {}) => {
 
   if (auth?.user?.uuid_business_id) {
     headers['X-Business-Id'] = auth.user.uuid_business_id;
+    // Also send as X-Namespace-Id for namespace-scoped API routes
+    // The namespace middleware accepts uuid, id, or slug as identifier
+    headers['X-Namespace-Id'] = auth.user.uuid_business_id;
+  }
+
+  // If user has a specific namespace_id, use that instead
+  if (auth?.user?.namespace_id) {
+    headers['X-Namespace-Id'] = auth.user.namespace_id;
+  }
+
+  // Support for namespace UUID from user context
+  if (auth?.user?.namespace?.uuid) {
+    headers['X-Namespace-Id'] = auth.user.namespace.uuid;
+  } else if (auth?.user?.namespace?.id) {
+    headers['X-Namespace-Id'] = auth.user.namespace.id;
   }
 
   const instance = axios.create({

@@ -126,6 +126,32 @@ export const checkStoredAuth = createAsyncThunk(
   }
 );
 
+/**
+ * Handle OAuth callback - validates token received from deep link
+ */
+export const handleOAuthCallback = createAsyncThunk<AuthResponse, string>(
+  "auth/handleOAuthCallback",
+  async (token, { rejectWithValue }) => {
+    try {
+      console.log("[Auth] Processing OAuth callback token");
+      const result = (await window.electronAPI.invoke(
+        "auth:handle-oauth-callback",
+        { token }
+      )) as AuthResponse;
+
+      if (!result.success) {
+        return rejectWithValue(result.error || "OAuth authentication failed");
+      }
+
+      // Connect socket after successful OAuth
+      await window.electronAPI.invoke("socket:connect");
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "OAuth authentication failed");
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -214,6 +240,29 @@ const authSlice = createSlice({
       })
       .addCase(checkStoredAuth.rejected, (state) => {
         state.isLoading = false;
+        state.isInitialized = true;
+      });
+
+    // OAuth Callback
+    builder
+      .addCase(handleOAuthCallback.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(handleOAuthCallback.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isAuthenticated = true;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.error = null;
+        state.isInitialized = true;
+      })
+      .addCase(handleOAuthCallback.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isAuthenticated = false;
+        state.user = null;
+        state.token = null;
+        state.error = action.payload as string;
         state.isInitialized = true;
       });
   },
