@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from './hooks/useAppDispatch';
-import { checkStoredAuth } from './store/slices/authSlice';
+import { checkStoredAuth, handleOAuthCallback } from './store/slices/authSlice';
 import { loadSettings } from './store/slices/uiSlice';
 import { fetchPendingInvites } from './store/slices/inviteSlice';
 import { useSocketEvents } from './hooks/useSocketEvents';
@@ -23,6 +23,18 @@ const App: React.FC = () => {
   useEffect(() => {
     dispatch(checkStoredAuth());
     dispatch(loadSettings());
+  }, [dispatch]);
+
+  // Listen for OAuth callback from deep link
+  useEffect(() => {
+    const cleanup = window.electronAPI.on('oauth:callback', (data: { token: string }) => {
+      console.log('[App] Received OAuth callback');
+      if (data.token) {
+        dispatch(handleOAuthCallback(data.token));
+      }
+    });
+
+    return cleanup;
   }, [dispatch]);
 
   // Apply theme

@@ -160,6 +160,9 @@ const validReceiveChannels = [
   // Notifications
   'notification:show',
   'notification:clicked',
+
+  // OAuth
+  'oauth:callback',
 ];
 
 // Expose protected methods to renderer
